@@ -12,8 +12,10 @@ def main():
     """
     主程序，执行数据加载、模型训练和评估的全过程。
     """
+    # 检查是否有可用的 GPU，如果有则使用 GPU 训练模型，否则使用 CPU，输出详细的用于计算的设备信息
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
+
 
     # 1. 数据加载与预处理
     train_path = 'UJIndoorLoc/trainingData.csv'
@@ -47,24 +49,31 @@ def main():
     y_train_original = scaler_y.inverse_transform(y_train)
     y_test_original = scaler_y.inverse_transform(y_test)
 
+    # 定义 SVR 参数
+    svr_params = {
+        'kernel': 'rbf',
+        'C': 1,
+        'epsilon': 0.1
+    }
+
     # 训练 MultiOutputRegressor SVR
-    best_svr = train_and_evaluate_svr(X_train_features, y_train_original, X_test_features, y_test_original)
+    best_svr_model = train_and_evaluate_svr(X_train_features, y_train_original, X_test_features, y_test_original, svr_params=svr_params)
 
     # 预测并评估
-    y_pred = best_svr.predict(X_test_features)
+    y_pred = best_svr_model.predict(X_test_features)
 
     mse = mean_squared_error(y_test_original, y_pred)
     mae = mean_absolute_error(y_test_original, y_pred)
     r2 = r2_score(y_test_original, y_pred)
 
-    print(f"合并后的 SVR 回归模型评估结果：")
+    print(f"SVR 回归模型评估结果：")
     print(f"MSE: {mse:.6f}")
     print(f"MAE: {mae:.6f}")
     print(f"R^2 Score: {r2:.6f}")
 
-    # 如有需要，可以在此处保存模型和其他结果
-    # torch.save(model.state_dict(), 'best_transformer_autoencoder.pth')
-    # joblib.dump(best_svr, 'best_svr_model.pkl')
+    # 保存模型和其他结果
+    torch.save(model.state_dict(), 'best_transformer_autoencoder.pth')
+    joblib.dump(best_svr_model, 'best_svr_model.pkl')
 
 if __name__ == '__main__':
     main()

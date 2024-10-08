@@ -114,7 +114,7 @@ def extract_features(model, X_data, device, batch_size=256):
             features.append(encoded.cpu().numpy())
     return np.vstack(features)
 
-def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test):
+def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, svr_params=None):
     """
     训练并评估 SVR 模型。
 
@@ -123,26 +123,33 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test):
     - y_train: 训练集目标变量
     - X_test_features: 测试集特征
     - y_test: 测试集目标变量
+    - svr_params: SVR模型的参数字典（可选）
 
     返回：
     - best_svr: 训练好的 SVR 模型
     """
-    print("使用 RandomizedSearchCV 调优 SVR 模型参数...")
-    param_dist = {
-        'estimator__kernel': ['rbf', 'linear'],
-        'estimator__C': [0.1, 1, 10, 100, 1000],
-        'estimator__epsilon': [0.05, 0.1, 0.2, 0.5, 1.0]
-    }
-    svr = SVR()
-    multi_svr = MultiOutputRegressor(svr)
-    random_search = RandomizedSearchCV(
-        multi_svr, param_distributions=param_dist, n_iter=20, cv=3,
-        verbose=2, random_state=42, n_jobs=-1
-    )
-    random_search.fit(X_train_features, y_train)
+    if svr_params is None:
+        print("使用 RandomizedSearchCV 调优 SVR 模型参数...")
+        param_dist = {
+            'estimator__kernel': ['rbf', 'linear'],
+            'estimator__C': [0.1, 1, 10, 100, 1000],
+            'estimator__epsilon': [0.05, 0.1, 0.2, 0.5, 1.0]
+        }
+        svr = SVR()
+        multi_svr = MultiOutputRegressor(svr)
+        random_search = RandomizedSearchCV(
+            multi_svr, param_distributions=param_dist, n_iter=20, cv=3,
+            verbose=2, random_state=42, n_jobs=-1
+        )
+        random_search.fit(X_train_features, y_train)
 
-    print(f"最佳参数: {random_search.best_params_}")
-    best_svr = random_search.best_estimator_
+        print(f"最佳参数: {random_search.best_params_}")
+        best_svr = random_search.best_estimator_
+    else:
+        print("使用提供的 SVR 参数训练模型...")
+        svr = SVR(**svr_params)
+        best_svr = MultiOutputRegressor(svr)
+        best_svr.fit(X_train_features, y_train)
 
     y_pred = best_svr.predict(X_test_features)
     mse = mean_squared_error(y_test, y_pred)

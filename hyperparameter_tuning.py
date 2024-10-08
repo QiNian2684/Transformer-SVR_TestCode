@@ -9,10 +9,11 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import itertools
 import joblib
 import os
+import json
 
 def hyperparameter_tuning():
     """
-    调优项目中的所有参数，包括Transformer自编码器和SVR回归模型的参数。
+    调优项目中的所有参数，包括 Transformer 自编码器和 SVR 回归模型的参数。
 
     该函数将遍历预定义的参数网格，训练模型，评估性能，并记录最佳参数组合。
     """
@@ -25,27 +26,22 @@ def hyperparameter_tuning():
     print("加载并预处理数据...")
     X_train, y_train, X_val, y_val, X_test, y_test, scaler_X, scaler_y = load_and_preprocess_data(train_path, test_path)
 
-    # 2. 定义参数网格
+    # 2. 定义参数网格（缩小参数范围以减少计算量）
     transformer_params = {
-        'model_dim': [128, 256],          # 模型维度
-        'num_heads': [8, 16],             # 多头注意力头数
-        'num_layers': [2, 4],             # Transformer编码器层数
-        'dropout': [0.1, 0.2, 0.3],            # Dropout概率
-        'learning_rate': [1e-4,1e-3,1e-2,2e-4],    # 学习率
-        'batch_size': [256, 512],         # 批次大小
-        'epochs': [40,50,70],                    # 训练轮数
-        'early_stopping_patience': [5]    # 早停轮数
+        'model_dim': [128],
+        'num_heads': [8],
+        'num_layers': [2, 4],
+        'dropout': [0.1, 0.3],
+        'learning_rate': [1e-4, 1e-3],
+        'batch_size': [256],
+        'epochs': [50],
+        'early_stopping_patience': [5]
     }
 
-    svr_params = {
-        # 'estimator__kernel' 指定 SVR 模型的核函数类型
-        'estimator__kernel': ['rbf', 'linear'],  # 'rbf' 是径向基函数，适用于非线性问题；'linear' 是线性核，适用于线性问题
-
-        # 'estimator__C' 指定 SVR 模型的惩罚参数 C
-        'estimator__C': [1, 10, 100],  # C 的值越大，模型越倾向于正确分类所有训练样本（可能导致过拟合）
-
-        # 'estimator__epsilon' 指定 SVR 模型中 epsilon 参数的值
-        'estimator__epsilon': [0.1, 0.2, 0.5]  # epsilon 控制模型对预测误差的容忍度，值越小，模型对误差的敏感度越高
+    svr_params_grid = {
+        'kernel': ['rbf'],
+        'C': [1, 10],
+        'epsilon': [0.1, 0.2]
     }
 
     # 创建所有参数组合的笛卡尔积
@@ -57,22 +53,27 @@ def hyperparameter_tuning():
         transformer_params['learning_rate'],
         transformer_params['batch_size'],
         transformer_params['epochs'],
-        transformer_params['early_stopping_patience']
+        transformer_params['early_stopping_patience'],
+        svr_params_grid['kernel'],
+        svr_params_grid['C'],
+        svr_params_grid['epsilon']
     ))
 
-    print(f"总共有 {len(param_combinations)} 组 Transformer 参数组合需要评估。")
+    print(f"总共有 {len(param_combinations)} 组参数组合需要评估。")
 
     # 初始化最佳性能记录
     best_r2 = -float('inf')
     best_params = {}
     best_svr_model = None
+    best_transformer_model_state = None
     best_transformer_params = {}
 
-    # 遍历每一组Transformer参数
-    for idx, (model_dim, num_heads, num_layers, dropout, learning_rate, batch_size, epochs, patience) in enumerate(param_combinations):
+    # 遍历每一组参数组合
+    for idx, (model_dim, num_heads, num_layers, dropout, learning_rate, batch_size, epochs, patience, svr_kernel, svr_C, svr_epsilon) in enumerate(param_combinations):
         print(f"\n正在评估第 {idx+1}/{len(param_combinations)} 组参数：")
         print(f"Transformer参数 - model_dim: {model_dim}, num_heads: {num_heads}, num_layers: {num_layers}, dropout: {dropout}")
         print(f"训练参数 - learning_rate: {learning_rate}, batch_size: {batch_size}, epochs: {epochs}, early_stopping_patience: {patience}")
+        print(f"SVR参数 - kernel: {svr_kernel}, C: {svr_C}, epsilon: {svr_epsilon}")
 
         # 3. 初始化 Transformer 自编码器模型
         model = WiFiTransformerAutoencoder(
@@ -102,11 +103,22 @@ def hyperparameter_tuning():
         y_train_original = scaler_y.inverse_transform(y_train)
         y_test_original = scaler_y.inverse_transform(y_test)
 
-        # 训练 MultiOutputRegressor SVR
-        best_svr = train_and_evaluate_svr(X_train_features, y_train_original, X_test_features, y_test_original)
+        # 定义当前 SVR 参数
+        current_svr_params = {
+            'kernel': svr_kernel,
+            'C': svr_C,
+            'epsilon': svr_epsilon
+        }
+
+        # 训练 SVR 模型
+        svr_model = train_and_evaluate_svr(
+            X_train_features, y_train_original,
+            X_test_features, y_test_original,
+            svr_params=current_svr_params
+        )
 
         # 预测并评估
-        y_pred = best_svr.predict(X_test_features)
+        y_pred = svr_model.predict(X_test_features)
 
         mse = mean_squared_error(y_test_original, y_pred)
         mae = mean_absolute_error(y_test_original, y_pred)
@@ -119,50 +131,48 @@ def hyperparameter_tuning():
         if r2 > best_r2:
             best_r2 = r2
             best_params = {
-                'model_dim': model_dim,
-                'num_heads': num_heads,
-                'num_layers': num_layers,
-                'dropout': dropout,
-                'learning_rate': learning_rate,
-                'batch_size': batch_size,
-                'epochs': epochs,
-                'early_stopping_patience': patience,
-                'svr_params': best_svr.estimator.get_params()
+                'transformer_params': {
+                    'model_dim': model_dim,
+                    'num_heads': num_heads,
+                    'num_layers': num_layers,
+                    'dropout': dropout,
+                    'learning_rate': learning_rate,
+                    'batch_size': batch_size,
+                    'epochs': epochs,
+                    'early_stopping_patience': patience
+                },
+                'svr_params': current_svr_params
             }
-            best_svr_model = best_svr
+            best_svr_model = svr_model
+            best_transformer_model_state = model.state_dict()
             best_transformer_params = {
                 'model_dim': model_dim,
                 'num_heads': num_heads,
                 'num_layers': num_layers,
-                'dropout': dropout,
-                'learning_rate': learning_rate,
-                'batch_size': batch_size,
-                'epochs': epochs,
-                'early_stopping_patience': patience
+                'dropout': dropout
             }
 
     # 保存最佳模型和参数
     print("\n超参数调优完成。最佳参数组合如下：")
-    print(best_params)
+    print(json.dumps(best_params, indent=4, ensure_ascii=False))
     print(f"最佳 R^2 Score: {best_r2:.6f}")
 
-    # 保存最佳Transformer模型
+    # 保存最佳 Transformer 模型
     transformer_model = WiFiTransformerAutoencoder(
         model_dim=best_transformer_params['model_dim'],
         num_heads=best_transformer_params['num_heads'],
         num_layers=best_transformer_params['num_layers'],
         dropout=best_transformer_params['dropout']
     ).to(device)
-    transformer_model.load_state_dict(torch.load('best_transformer_autoencoder.pth'))
+    transformer_model.load_state_dict(best_transformer_model_state)
     torch.save(transformer_model.state_dict(), 'best_transformer_autoencoder_tuned.pth')
 
-    # 保存最佳SVR模型
+    # 保存最佳 SVR 模型
     joblib.dump(best_svr_model, 'best_svr_model_tuned.pkl')
 
     # 保存最佳参数
-    import json
-    with open('best_hyperparameters.json', 'w') as f:
-        json.dump(best_params, f, indent=4)
+    with open('best_hyperparameters.json', 'w', encoding='utf-8') as f:
+        json.dump(best_params, f, indent=4, ensure_ascii=False)
 
     print("最佳模型和参数已保存。")
 
