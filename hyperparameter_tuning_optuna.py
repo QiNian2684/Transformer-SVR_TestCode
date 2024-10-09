@@ -1,5 +1,4 @@
 # hyperparameter_tuning_optuna.py
-
 import torch
 import numpy as np
 from data_preprocessing import load_and_preprocess_data
@@ -26,9 +25,9 @@ def main():
     test_path = 'UJIndoorLoc/validationData_building0.csv'
 
     # 固定训练参数
-    epochs = 50  # 训练轮数
-    n_trials = 1  # Optuna 试验次数，根据计算资源调整
-    n_jobs = 1     # 并行进程数量
+    epochs = 100  # 训练轮数
+    n_trials = 100  # Optuna 试验次数，根据计算资源调整
+    n_jobs = 4     # 并行进程数量
 
     # === 数据加载与预处理 ===
     print("加载并预处理数据...")
@@ -38,8 +37,8 @@ def main():
     def objective(trial):
         # Transformer 自编码器超参数
         model_dim = trial.suggest_categorical('model_dim', [16, 32, 64])
-        num_heads = trial.suggest_categorical('num_heads', [2, 4])
-        num_layers = trial.suggest_categorical('num_layers', [4, 8])
+        num_heads = trial.suggest_categorical('num_heads', [2, 4, 8])
+        num_layers = trial.suggest_categorical('num_layers', [4, 8, 16])
         dropout = trial.suggest_float('dropout', 0.0, 0.5)
         learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-3, log=True)
         batch_size = trial.suggest_categorical('batch_size', [64, 128])
