@@ -21,8 +21,8 @@ def hyperparameter_tuning():
     print(f"使用设备: {device}")
 
     # 1. 数据加载与预处理
-    train_path = 'UJIndoorLoc/trainingData.csv'
-    test_path = 'UJIndoorLoc/validationData.csv'
+    train_path = 'UJIndoorLoc/trainingData_building0.csv'
+    test_path = 'UJIndoorLoc/validationData_building0.csv'
     print("加载并预处理数据...")
     X_train, y_train, X_val, y_val, X_test, y_test, scaler_X, scaler_y = load_and_preprocess_data(train_path, test_path)
 
@@ -32,7 +32,7 @@ def hyperparameter_tuning():
         'num_heads': [4],  # 多头注意力机制中的头数
         'num_layers': [4],  # Transformer模型的层数
         'dropout': [0.3],  # 用于防止过拟合的Dropout率
-        'learning_rate': [0.0005],  # 优化器的学习率
+        'learning_rate': [0.0007],  # 优化器的学习率
         'batch_size': [32],  # 训练时使用的批大小
         'epochs': [50],  # 训练的轮数
         'early_stopping_patience': [5]  # 提前停止的耐心参数（若验证损失在5轮内未改善则停止训练）

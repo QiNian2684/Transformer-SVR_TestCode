@@ -17,8 +17,8 @@ def main():
     print(f"使用设备: {device}")
 
     # 1. 数据加载与预处理
-    train_path = 'UJIndoorLoc/trainingData.csv'
-    test_path = 'UJIndoorLoc/validationData.csv'
+    train_path = 'UJIndoorLoc/trainingData1.csv'
+    test_path = 'UJIndoorLoc/validationData1.csv'
     print("加载并预处理数据...")
     X_train, y_train, X_val, y_val, X_test, y_test, scaler_X, scaler_y = load_and_preprocess_data(train_path, test_path)
 
