@@ -8,13 +8,14 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.svm import SVR
 from sklearn.multioutput import MultiOutputRegressor
 import joblib
+import matplotlib.pyplot as plt
 
 def compute_error_distances(y_true, y_pred):
     """
     计算真实位置和预测位置之间的欧氏距离（以米为单位）。
 
     参数：
-    - y_true: 真实位置的数组，形状为 [n_samples, 2]，列分别为 [LONGITUDE, LATITUDE]
+    - y_true: 真实位置的数组，形状为 [n_samples, 2]，列分别为 [X_coordinate, Y_coordinate]
     - y_pred: 预测位置的数组，形状为 [n_samples, 2]
 
     返回：
@@ -33,7 +34,7 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
     - X_val: 验证集特征
     - device: 设备类型
     - epochs: 训练轮数
-    - batch_size: 批次大小
+    - batch大小
     - learning_rate: 学习率
     - early_stopping_patience: 早停的轮数
 
@@ -184,5 +185,17 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
 
     # 保存 SVR 模型
     joblib.dump(best_svr, 'best_svr_model.pkl')
+
+    # 生成预测误差散点图
+    error_x = y_pred[:, 0] - y_test[:, 0]
+    error_y = y_pred[:, 1] - y_test[:, 1]
+
+    plt.figure(figsize=(8, 6))
+    plt.scatter(error_x, error_y, alpha=0.5)
+    plt.title('Prediction Errors')
+    plt.xlabel('Error in X coordinate (meters)')
+    plt.ylabel('Error in Y coordinate (meters)')
+    plt.grid(True)
+    plt.show()
 
     return best_svr

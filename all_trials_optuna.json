@@ -1,0 +1,19 @@
+[
+    {
+        "number": 0,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 4,
+            "num_layers": 4,
+            "dropout": 0.21167740258720175,
+            "learning_rate": 0.00035520003114773534,
+            "batch_size": 128,
+            "early_stopping_patience": 7,
+            "svr_C": 7.530862212365651,
+            "svr_epsilon": 0.8901613753032884
+        },
+        "value": 9.014256480924077,
+        "state": "COMPLETE",
+        "duration": 43.389542
+    }
+]
