@@ -11,28 +11,16 @@ import joblib
 
 def compute_error_distances(y_true, y_pred):
     """
-    计算真实位置和预测位置之间的地理距离（以米为单位）。
+    计算真实位置和预测位置之间的欧氏距离（以米为单位）。
 
     参数：
-    - y_true: 真实位置的数组，形状为 [n_samples, 2]，列分别为 [经度, 纬度]
+    - y_true: 真实位置的数组，形状为 [n_samples, 2]，列分别为 [LONGITUDE, LATITUDE]
     - y_pred: 预测位置的数组，形状为 [n_samples, 2]
 
     返回：
     - distances: 距离数组，形状为 [n_samples,]，单位为米
     """
-    # 将度数转换为弧度
-    lat1 = np.radians(y_true[:, 1])
-    lon1 = np.radians(y_true[:, 0])
-    lat2 = np.radians(y_pred[:, 1])
-    lon2 = np.radians(y_pred[:, 0])
-
-    # Haversine 公式
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
-    c = 2 * np.arcsin(np.sqrt(a))
-    R = 6371000  # 地球半径，单位为米
-    distances = R * c
+    distances = np.linalg.norm(y_true - y_pred, axis=1)
     return distances
 
 def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, learning_rate=2e-4, early_stopping_patience=5):
