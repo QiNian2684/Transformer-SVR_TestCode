@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
-from training_and_evaluation import train_autoencoder, extract_features, train_and_evaluate_svr
+from training_and_evaluation import train_autoencoder, extract_features, train_and_evaluate_svr, compute_error_distances
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import joblib
 
@@ -16,10 +16,9 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
 
-
     # 1. 数据加载与预处理
-    train_path = 'UJIndoorLoc/trainingData.csv'
-    test_path = 'UJIndoorLoc/validationData.csv'
+    train_path = 'UJIndoorLoc/trainingData - 副本.csv'
+    test_path = 'UJIndoorLoc/validationData - 副本.csv'
     print("加载并预处理数据...")
     X_train, y_train, X_val, y_val, X_test, y_test, scaler_X, scaler_y = load_and_preprocess_data(train_path, test_path)
 
@@ -66,10 +65,17 @@ def main():
     mae = mean_absolute_error(y_test_original, y_pred)
     r2 = r2_score(y_test_original, y_pred)
 
+    # 计算误差距离
+    error_distances = compute_error_distances(y_test_original, y_pred)
+    mean_error_distance = np.mean(error_distances)
+    median_error_distance = np.median(error_distances)
+
     print(f"SVR 回归模型评估结果：")
     print(f"MSE: {mse:.6f}")
     print(f"MAE: {mae:.6f}")
     print(f"R^2 Score: {r2:.6f}")
+    print(f"平均误差距离（米）: {mean_error_distance:.2f}")
+    print(f"中位数误差距离（米）: {median_error_distance:.2f}")
 
     # 保存模型和其他结果
     torch.save(model.state_dict(), 'best_transformer_autoencoder.pth')

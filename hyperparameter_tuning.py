@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
-from training_and_evaluation import train_autoencoder, extract_features, train_and_evaluate_svr
+from training_and_evaluation import train_autoencoder, extract_features, train_and_evaluate_svr, compute_error_distances
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import itertools
 import joblib
@@ -28,20 +28,20 @@ def hyperparameter_tuning():
 
     # 2. 定义参数网格（缩小参数范围以减少计算量）
     transformer_params = {
-        'model_dim': [128],
-        'num_heads': [8],
-        'num_layers': [2, 4],
-        'dropout': [0.1, 0.3],
-        'learning_rate': [1e-4, 1e-3],
-        'batch_size': [256],
-        'epochs': [50],
-        'early_stopping_patience': [5]
+        'model_dim': [128],  # 模型的嵌入维度（隐藏层维度）
+        'num_heads': [4],  # 多头注意力机制中的头数
+        'num_layers': [4],  # Transformer模型的层数
+        'dropout': [0.3],  # 用于防止过拟合的Dropout率
+        'learning_rate': [0.0003],  # 优化器的学习率
+        'batch_size': [32],  # 训练时使用的批大小
+        'epochs': [50],  # 训练的轮数
+        'early_stopping_patience': [5]  # 提前停止的耐心参数（若验证损失在5轮内未改善则停止训练）
     }
 
     svr_params_grid = {
-        'kernel': ['rbf'],
-        'C': [1, 10],
-        'epsilon': [0.1, 0.2]
+        'kernel': ['rbf'],  # SVR中使用的核函数类型（'rbf'表示径向基函数）
+        'C': [1, 10],  # 误差项的惩罚参数C
+        'epsilon': [0.1, 0.2]  # epsilon-SVR模型中的epsilon值
     }
 
     # 创建所有参数组合的笛卡尔积
@@ -62,7 +62,7 @@ def hyperparameter_tuning():
     print(f"总共有 {len(param_combinations)} 组参数组合需要评估。")
 
     # 初始化最佳性能记录
-    best_r2 = -float('inf')
+    best_mean_error_distance = float('inf')
     best_params = {}
     best_svr_model = None
     best_transformer_model_state = None
@@ -124,12 +124,19 @@ def hyperparameter_tuning():
         mae = mean_absolute_error(y_test_original, y_pred)
         r2 = r2_score(y_test_original, y_pred)
 
+        # 计算误差距离
+        error_distances = compute_error_distances(y_test_original, y_pred)
+        mean_error_distance = np.mean(error_distances)
+        median_error_distance = np.median(error_distances)
+
         print(f"当前参数组合的评估结果：")
         print(f"MSE: {mse:.6f}, MAE: {mae:.6f}, R^2 Score: {r2:.6f}")
+        print(f"平均误差距离（米）: {mean_error_distance:.2f}")
+        print(f"中位数误差距离（米）: {median_error_distance:.2f}")
 
         # 更新最佳参数
-        if r2 > best_r2:
-            best_r2 = r2
+        if mean_error_distance < best_mean_error_distance:
+            best_mean_error_distance = mean_error_distance
             best_params = {
                 'transformer_params': {
                     'model_dim': model_dim,
@@ -155,7 +162,7 @@ def hyperparameter_tuning():
     # 保存最佳模型和参数
     print("\n超参数调优完成。最佳参数组合如下：")
     print(json.dumps(best_params, indent=4, ensure_ascii=False))
-    print(f"最佳 R^2 Score: {best_r2:.6f}")
+    print(f"最佳平均误差距离（米）: {best_mean_error_distance:.2f}")
 
     # 保存最佳 Transformer 模型
     transformer_model = WiFiTransformerAutoencoder(

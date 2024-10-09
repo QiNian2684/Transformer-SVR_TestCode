@@ -9,6 +9,32 @@ from sklearn.svm import SVR
 from sklearn.multioutput import MultiOutputRegressor
 import joblib
 
+def compute_error_distances(y_true, y_pred):
+    """
+    计算真实位置和预测位置之间的地理距离（以米为单位）。
+
+    参数：
+    - y_true: 真实位置的数组，形状为 [n_samples, 2]，列分别为 [经度, 纬度]
+    - y_pred: 预测位置的数组，形状为 [n_samples, 2]
+
+    返回：
+    - distances: 距离数组，形状为 [n_samples,]，单位为米
+    """
+    # 将度数转换为弧度
+    lat1 = np.radians(y_true[:, 1])
+    lon1 = np.radians(y_true[:, 0])
+    lat2 = np.radians(y_pred[:, 1])
+    lon2 = np.radians(y_pred[:, 0])
+
+    # Haversine 公式
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    R = 6371000  # 地球半径，单位为米
+    distances = R * c
+    return distances
+
 def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, learning_rate=2e-4, early_stopping_patience=5):
     """
     训练 Transformer 自编码器模型。
@@ -156,10 +182,17 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
 
+    # 计算误差距离
+    error_distances = compute_error_distances(y_test, y_pred)
+    mean_error_distance = np.mean(error_distances)
+    median_error_distance = np.median(error_distances)
+
     print(f"SVR 回归模型评估结果：")
     print(f"MSE: {mse:.6f}")
     print(f"MAE: {mae:.6f}")
     print(f"R^2 Score: {r2:.6f}")
+    print(f"平均误差距离（米）: {mean_error_distance:.2f}")
+    print(f"中位数误差距离（米）: {median_error_distance:.2f}")
 
     # 保存 SVR 模型
     joblib.dump(best_svr, 'best_svr_model.pkl')
