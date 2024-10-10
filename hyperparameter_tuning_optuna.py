@@ -6,6 +6,7 @@ from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
 from training_and_evaluation import (
     train_autoencoder,
+
     extract_features,
     train_and_evaluate_svr,
     compute_error_distances,
@@ -22,13 +23,13 @@ def main():
     print(f"使用设备: {device}")
 
     # 数据路径
-    train_path = 'UJIndoorLoc/trainingData.csv'
-    test_path = 'UJIndoorLoc/validationData.csv'
+    train_path = 'UJIndoorLoc/trainingData_building2.csv'
+    test_path = 'UJIndoorLoc/validationData_building2.csv'
 
     # 固定训练参数
     epochs = 200  # 训练轮数
     n_trials = 300  # Optuna 试验次数，根据计算资源调整
-    n_jobs = 1     # 并行进程数量
+
 
     # === 数据加载与预处理 ===
     print("加载并预处理数据...")
@@ -161,7 +162,7 @@ def main():
 
     # === 创建和运行优化研究 ===
     study = optuna.create_study(direction='minimize', pruner=optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=10))
-    study.optimize(objective, n_trials=n_trials, n_jobs=n_jobs)
+    study.optimize(objective, n_trials=n_trials, n_jobs=1)
 
     # === 打印和保存最佳结果 ===
     print("最佳参数：")

@@ -8,6 +8,7 @@ from training_and_evaluation import train_autoencoder, extract_features, train_a
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import joblib
 
+
 def main():
     """
     主程序，执行数据加载、模型训练和评估的全过程。
@@ -59,7 +60,8 @@ def main():
     }
 
     # 训练 MultiOutputRegressor SVR
-    best_svr_model = train_and_evaluate_svr(X_train_features, y_train_original, X_test_features, y_test_original, svr_params=svr_params)
+    best_svr_model = train_and_evaluate_svr(X_train_features, y_train_original, X_test_features, y_test_original,
+                                            svr_params=svr_params)
 
     # 预测并评估
     y_pred = best_svr_model.predict(X_test_features)
@@ -101,6 +103,7 @@ def main():
 
     # 保存预测结果（可选）
     np.savetxt('y_pred_final.csv', y_pred_rounded, delimiter=',', header='LONGITUDE,LATITUDE,FLOOR', comments='')
+
 
 if __name__ == '__main__':
     main()
