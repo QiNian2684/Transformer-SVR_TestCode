@@ -198,7 +198,7 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
     error_floor = y_pred[:, 2] - y_test[:, 2]
 
     # 将楼层误差转换为米
-    error_z = error_floor * 6
+    error_z = error_floor * 3
 
     # 创建3D图形
     fig = plt.figure(figsize=(10, 8))

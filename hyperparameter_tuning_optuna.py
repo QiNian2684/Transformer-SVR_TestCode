@@ -26,8 +26,8 @@ def main():
     test_path = 'UJIndoorLoc/validationData_building0.csv'
 
     # 固定训练参数
-    epochs = 50  # 训练轮数
-    n_trials = 100  # Optuna 试验次数，根据计算资源调整
+    epochs = 200  # 训练轮数
+    n_trials = 200  # Optuna 试验次数，根据计算资源调整
     n_jobs = 1     # 并行进程数量
 
     # === 数据加载与预处理 ===
@@ -142,7 +142,6 @@ def main():
     patience = best_params['early_stopping_patience']
     svr_C = best_params['svr_C']
     svr_epsilon = best_params['svr_epsilon']
-    epochs = 50  # 固定的训练轮数
 
     # 初始化并训练最佳模型
     best_model = WiFiTransformerAutoencoder(
