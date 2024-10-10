@@ -40,12 +40,14 @@ def main():
     # 4. 提取特征
     print("提取训练集和测试集特征...")
     X_train_features = extract_features(model, X_train, device=device, batch_size=256)
+    X_val_features = extract_features(model, X_val, device=device, batch_size=256)
     X_test_features = extract_features(model, X_test, device=device, batch_size=256)
 
     # 5. 训练和评估 SVR 模型
     print("训练和评估 SVR 回归模型...")
     # 逆标准化目标变量进行训练和评估
     y_train_original = scaler_y.inverse_transform(y_train)
+    y_val_original = scaler_y.inverse_transform(y_val)
     y_test_original = scaler_y.inverse_transform(y_test)
 
     # 定义 SVR 参数
@@ -60,6 +62,10 @@ def main():
 
     # 预测并评估
     y_pred = best_svr_model.predict(X_test_features)
+
+    # 轮廓预测：四舍五入楼层
+    y_pred_rounded = y_pred.copy()
+    y_pred_rounded[:, 2] = np.round(y_pred_rounded[:, 2])
 
     mse = mean_squared_error(y_test_original, y_pred)
     mae = mean_absolute_error(y_test_original, y_pred)
@@ -77,9 +83,23 @@ def main():
     print(f"平均误差距离（米）: {mean_error_distance:.2f}")
     print(f"中位数误差距离（米）: {median_error_distance:.2f}")
 
+    # 分别评估每个目标变量
+    for i, target in enumerate(['LONGITUDE', 'LATITUDE', 'FLOOR']):
+        mse = mean_squared_error(y_test_original[:, i], y_pred[:, i])
+        mae = mean_absolute_error(y_test_original[:, i], y_pred[:, i])
+        r2 = r2_score(y_test_original[:, i], y_pred[:, i])
+        print(f"{target} - MSE: {mse:.6f}, MAE: {mae:.6f}, R^2 Score: {r2:.6f}")
+
     # 保存模型和其他结果
     torch.save(model.state_dict(), 'best_transformer_autoencoder.pth')
     joblib.dump(best_svr_model, 'best_svr_model.pkl')
+
+    # 另存最佳模型参数和缩放器
+    joblib.dump(scaler_X, 'scaler_X.pkl')
+    joblib.dump(scaler_y, 'scaler_y.pkl')
+
+    # 保存预测结果（可选）
+    np.savetxt('y_pred_final.csv', y_pred_rounded, delimiter=',', header='LONGITUDE,LATITUDE,FLOOR', comments='')
 
 if __name__ == '__main__':
     main()

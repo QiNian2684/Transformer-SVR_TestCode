@@ -15,11 +15,11 @@ def load_and_preprocess_data(train_path, test_path):
 
     返回：
     - X_train: 训练集特征数组
-    - y_train: 训练集目标变量（标准化后的经度和纬度）
+    - y_train: 训练集目标变量（标准化后的经度、纬度和楼层）
     - X_val: 验证集特征数组
-    - y_val: 验证集目标变量（标准化后的经度和纬度）
+    - y_val: 验证集目标变量（标准化后的经度、纬度和楼层）
     - X_test: 测试集特征数组
-    - y_test: 测试集目标变量（标准化后的经度和纬度）
+    - y_test: 测试集目标变量（标准化后的经度、纬度和楼层）
     - scaler_X: 用于特征的标准化器
     - scaler_y: 用于目标变量的标准化器
     """
@@ -31,9 +31,9 @@ def load_and_preprocess_data(train_path, test_path):
     train_features = train_data.iloc[:, 0:520].replace(100, -105)
     test_features = test_data.iloc[:, 0:520].replace(100, -105)
 
-    # 提取目标变量（经度和纬度）
-    y_train_full = train_data[['LONGITUDE', 'LATITUDE']].values
-    y_test = test_data[['LONGITUDE', 'LATITUDE']].values
+    # 提取目标变量（经度、纬度和楼层）
+    y_train_full = train_data[['LONGITUDE', 'LATITUDE', 'FLOOR']].values
+    y_test = test_data[['LONGITUDE', 'LATITUDE', 'FLOOR']].values
 
     # 划分训练集和验证集（从训练数据中划分）
     X_train, X_val, y_train, y_val = train_test_split(

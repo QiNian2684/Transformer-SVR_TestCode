@@ -14,11 +14,13 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import joblib
 import os
 import json
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # 引入3D绘图工具包
 
 
 def main():
     # 固定训练轮数
-    epochs = 50  # 要根据超参数脚本中的最佳轮数进行调整
+    epochs = 100  # 要根据超参数脚本中的最佳轮数进行调整
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
@@ -75,10 +77,12 @@ def main():
     # 5. 提取特征
     print("提取训练和测试特征...")
     X_train_features = extract_features(model, X_train, device=device, batch_size=batch_size)
+    X_val_features = extract_features(model, X_val, device=device, batch_size=batch_size)
     X_test_features = extract_features(model, X_test, device=device, batch_size=batch_size)
 
     # 6. 逆标准化目标变量
     y_train_original = scaler_y.inverse_transform(y_train)
+    y_val_original = scaler_y.inverse_transform(y_val)
     y_test_original = scaler_y.inverse_transform(y_test)
 
     # 7. 定义 SVR 参数
@@ -99,6 +103,11 @@ def main():
     # 9. 预测并评估
     print("预测并计算评估指标...")
     y_pred = svr_model.predict(X_test_features)
+
+    # 轮廓预测：四舍五入楼层
+    y_pred_rounded = y_pred.copy()
+    y_pred_rounded[:, 2] = np.round(y_pred_rounded[:, 2])
+
     mse = mean_squared_error(y_test_original, y_pred)
     mae = mean_absolute_error(y_test_original, y_pred)
     r2 = r2_score(y_test_original, y_pred)
@@ -110,6 +119,43 @@ def main():
     print(f"MSE: {mse:.6f}, MAE: {mae:.6f}, R^2 Score: {r2:.6f}")
     print(f"平均误差距离（米）: {mean_error_distance:.2f}")
     print(f"中位数误差距离（米）: {median_error_distance:.2f}")
+
+    # 分别评估每个目标变量
+    for i, target in enumerate(['LONGITUDE', 'LATITUDE', 'FLOOR']):
+        mse = mean_squared_error(y_test_original[:, i], y_pred[:, i])
+        mae = mean_absolute_error(y_test_original[:, i], y_pred[:, i])
+        r2 = r2_score(y_test_original[:, i], y_pred[:, i])
+        print(f"{target} - MSE: {mse:.6f}, MAE: {mae:.6f}, R^2 Score: {r2:.6f}")
+
+    # 计算误差距离并生成3D误差散点图
+    error_x = y_pred[:, 0] - y_test_original[:, 0]
+    error_y = y_pred[:, 1] - y_test_original[:, 1]
+    error_floor = y_pred[:, 2] - y_test_original[:, 2]
+
+    # 将楼层误差转换为米
+    error_z = error_floor * 4
+
+    # 配置 Matplotlib 使用支持中文的字体
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # 或者 ['Microsoft YaHei']，根据您的系统字体选择
+    plt.rcParams['axes.unicode_minus'] = False  # 解决负号 '-' 显示为方块的问题
+
+    # 创建3D图形
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # 计算每个点的误差距离
+    error_distance = np.sqrt(error_x ** 2 + error_y ** 2 + error_z ** 2)
+
+    scatter = ax.scatter(error_x, error_y, error_z, c=error_distance, cmap='viridis', alpha=0.6)
+    cbar = plt.colorbar(scatter, ax=ax, pad=0.1)
+    cbar.set_label('误差距离 (米)')
+
+    ax.set_title('3D Prediction Errors')
+    ax.set_xlabel('Error in X coordinate (meters)')
+    ax.set_ylabel('Error in Y coordinate (meters)')
+    ax.set_zlabel('Error in Z coordinate (meters)')  # Z 代表垂直误差
+
+    plt.show()
 
     # 10. 保存模型和参数
     print("保存模型和参数...")
@@ -135,6 +181,15 @@ def main():
     with open(evaluation_results_path, 'w', encoding='utf-8') as f:
         json.dump(evaluation_results, f, indent=4, ensure_ascii=False)
     print(f"评估结果已保存到 {evaluation_results_path}")
+
+    # 保存缩放器（如果需要后续使用）
+    joblib.dump(scaler_X, 'scaler_X.pkl')
+    joblib.dump(scaler_y, 'scaler_y.pkl')
+    print("缩放器已保存到 scaler_X.pkl 和 scaler_y.pkl")
+
+    # 保存最终预测结果（可选）
+    np.savetxt('y_pred_final.csv', y_pred_rounded, delimiter=',', header='LONGITUDE,LATITUDE,FLOOR', comments='')
+    print("预测结果已保存到 y_pred_final.csv")
 
     print("模型训练和评估完成。")
 

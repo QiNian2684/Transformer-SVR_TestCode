@@ -12,16 +12,21 @@ import matplotlib.pyplot as plt
 
 def compute_error_distances(y_true, y_pred):
     """
-    计算真实位置和预测位置之间的欧氏距离（以米为单位）。
+    计算真实位置和预测位置之间的欧氏距离（以米为单位），包括楼层差异。
 
     参数：
-    - y_true: 真实位置的数组，形状为 [n_samples, 2]，列分别为 [X_coordinate, Y_coordinate]
-    - y_pred: 预测位置的数组，形状为 [n_samples, 2]
+    - y_true: 真实位置的数组，形状为 [n_samples, 3]，列分别为 [X_coordinate, Y_coordinate, FLOOR]
+    - y_pred: 预测位置的数组，形状为 [n_samples, 3]
 
     返回：
     - distances: 距离数组，形状为 [n_samples,]，单位为米
     """
-    distances = np.linalg.norm(y_true - y_pred, axis=1)
+    # 计算水平距离（经度和纬度）
+    horizontal_distances = np.linalg.norm(y_true[:, :2] - y_pred[:, :2], axis=1)
+    # 计算垂直距离（楼层差异 * 4米）
+    vertical_distances = np.abs(y_true[:, 2] - y_pred[:, 2]) * 4
+    # 计算总欧氏距离
+    distances = np.sqrt(horizontal_distances**2 + vertical_distances**2)
     return distances
 
 def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, learning_rate=2e-4, early_stopping_patience=5):
@@ -34,7 +39,7 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
     - X_val: 验证集特征
     - device: 设备类型
     - epochs: 训练轮数
-    - batch大小
+    - batch_size: 批大小
     - learning_rate: 学习率
     - early_stopping_patience: 早停的轮数
 
@@ -129,6 +134,7 @@ def extract_features(model, X_data, device, batch_size=256):
             features.append(encoded.cpu().numpy())
     return np.vstack(features)
 
+
 def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, svr_params=None):
     """
     训练并评估 SVR 模型。
@@ -186,16 +192,30 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
     # 保存 SVR 模型
     joblib.dump(best_svr, 'best_svr_model.pkl')
 
-    # 生成预测误差散点图
+    # 生成3D预测误差散点图
     error_x = y_pred[:, 0] - y_test[:, 0]
     error_y = y_pred[:, 1] - y_test[:, 1]
+    error_floor = y_pred[:, 2] - y_test[:, 2]
 
-    plt.figure(figsize=(8, 6))
-    plt.scatter(error_x, error_y, alpha=0.5)
-    plt.title('Prediction Errors')
-    plt.xlabel('Error in X coordinate (meters)')
-    plt.ylabel('Error in Y coordinate (meters)')
-    plt.grid(True)
+    # 将楼层误差转换为米
+    error_z = error_floor * 6
+
+    # 创建3D图形
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # 计算每个点的误差距离
+    error_distance = np.sqrt(error_x ** 2 + error_y ** 2 + error_z ** 2)
+
+    scatter = ax.scatter(error_x, error_y, error_z, c=error_distance, cmap='viridis', alpha=0.6)
+    cbar = plt.colorbar(scatter, ax=ax, pad=0.1)
+    cbar.set_label('误差距离 (米)')
+
+    ax.set_title('3D Prediction Errors')
+    ax.set_xlabel('Error in X coordinate (meters)')
+    ax.set_ylabel('Error in Y coordinate (meters)')
+    ax.set_zlabel('Error in Z coordinate (meters)')  # Z represents vertical error
+
     plt.show()
 
     return best_svr
