@@ -10,6 +10,9 @@ from sklearn.multioutput import MultiOutputRegressor
 import joblib
 import matplotlib.pyplot as plt
 
+# 定义每层的高度（单位：米）
+FLOOR_HEIGHT = 3  # 您可以根据需要调整此值
+
 def compute_error_distances(y_true, y_pred):
     """
     计算真实位置和预测位置之间的欧氏距离（以米为单位），包括楼层差异。
@@ -21,10 +24,10 @@ def compute_error_distances(y_true, y_pred):
     返回：
     - distances: 距离数组，形状为 [n_samples,]，单位为米
     """
-    # 计算水平距离（经度和纬度）
+    # 计算水平距离（X 和 Y 坐标）
     horizontal_distances = np.linalg.norm(y_true[:, :2] - y_pred[:, :2], axis=1)
-    # 计算垂直距离（楼层差异 * 4米）
-    vertical_distances = np.abs(y_true[:, 2] - y_pred[:, 2]) * 4
+    # 计算垂直距离（楼层差异 * 每层高度）
+    vertical_distances = np.abs(y_true[:, 2] - y_pred[:, 2]) * FLOOR_HEIGHT
     # 计算总欧氏距离
     distances = np.sqrt(horizontal_distances**2 + vertical_distances**2)
     return distances
@@ -186,8 +189,8 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
     print(f"MSE: {mse:.6f}")
     print(f"MAE: {mae:.6f}")
     print(f"R^2 Score: {r2:.6f}")
-    print(f"平均误差距离（米）: {mean_error_distance:.2f}")
-    print(f"中位数误差距离（米）: {median_error_distance:.2f}")
+    print(f"平均误差距离（米）: {mean_error_distance:.2f}")  # 现在是三维误差
+    print(f"中位数误差距离（米）: {median_error_distance:.2f}")  # 现在是三维误差
 
     # 保存 SVR 模型
     joblib.dump(best_svr, 'best_svr_model.pkl')
@@ -198,7 +201,7 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
     error_floor = y_pred[:, 2] - y_test[:, 2]
 
     # 将楼层误差转换为米
-    error_z = error_floor * 3
+    error_z = error_floor * FLOOR_HEIGHT  # 使用统一的层高变量
 
     # 创建3D图形
     fig = plt.figure(figsize=(10, 8))
@@ -209,7 +212,7 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
 
     scatter = ax.scatter(error_x, error_y, error_z, c=error_distance, cmap='viridis', alpha=0.6)
     cbar = plt.colorbar(scatter, ax=ax, pad=0.1)
-    cbar.set_label('误差距离 (米)')
+    cbar.set_label('Error distance (meters)')
 
     ax.set_title('3D Prediction Errors')
     ax.set_xlabel('Error in X coordinate (meters)')

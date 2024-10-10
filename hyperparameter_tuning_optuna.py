@@ -2,6 +2,8 @@
 
 import torch
 import numpy as np
+from sqlalchemy.sql.operators import truediv
+
 from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
 from training_and_evaluation import (
@@ -27,7 +29,7 @@ def main():
 
     # 固定训练参数
     epochs = 200  # 训练轮数
-    n_trials = 200  # Optuna 试验次数，根据计算资源调整
+    n_trials = 300  # Optuna 试验次数，根据计算资源调整
     n_jobs = 1     # 并行进程数量
 
     # === 数据加载与预处理 ===
@@ -41,7 +43,7 @@ def main():
         num_heads = trial.suggest_categorical('num_heads', [2, 4, 8])
         num_layers = trial.suggest_categorical('num_layers', [4, 8, 16])
         dropout = trial.suggest_float('dropout', 0.0, 0.5)
-        learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-3, log=True)
+        learning_rate = trial.suggest_float('learning_rate', 0.0001, 0.005, log=True)
         batch_size = trial.suggest_categorical('batch_size', [64, 128])
         patience = trial.suggest_int('early_stopping_patience', 5, 15)
 
