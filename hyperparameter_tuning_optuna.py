@@ -27,7 +27,7 @@ def main():
     test_path = 'UJIndoorLoc/validationData_building2.csv'
 
     # 固定训练参数
-    epochs = 200  # 训练轮数
+    epochs = 150  # 训练轮数
     n_trials = 300  # Optuna 试验次数，根据计算资源调整
 
     # === 数据加载与预处理 ===
@@ -38,25 +38,34 @@ def main():
     def objective(trial):
         try:
             # Transformer 自编码器超参数
+
+            # 1. 选择 model_dim
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64])
             # model_dim: 模型维度，决定了模型的容量，更大的值意味着更强的学习能力，但也可能导致过拟合。
 
-            num_heads = trial.suggest_categorical('num_heads', [2, 4, 8])
+            # 2. 根据 model_dim 选择合适的 num_heads
+            if model_dim == 16:
+                num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16])
+            elif model_dim == 32:
+                num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16, 32])
+            else:  # model_dim == 64
+                num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16, 32])
             # num_heads: 注意力机制中的头数，更多头数可以捕捉更丰富的信息，但计算量也更大。
 
+            # 其余超参数
             num_layers = trial.suggest_categorical('num_layers', [2, 4, 8, 16])
             # num_layers: 编码器和解码器中层的数量，层数越多，模型能表达的复杂度越高，但也容易过拟合。
 
-            dropout = trial.suggest_float('dropout', 0.0, 0.3)
-            # dropout: 防止过拟合的技术，随机丢弃部分神经网络单元。增加dropout比率可以增强模型的泛化能力，但过高可能导致欠拟合。
+            dropout = trial.suggest_float('dropout', 0.1, 0.5)
+            # dropout: 防止过拟合的技术，随机丢弃部分神经网络单元。
 
             learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-3, log=True)
             # learning_rate: 学习率决定了参数更新的步长，过高可能导致训练不稳定，过低可能导致训练速度过慢。
 
-            batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512])
+            batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
             # batch_size: 每次训练的样本数量，较大的batch size通常可以提高训练稳定性和效率，但也可能影响模型的泛化能力。
 
-            patience = trial.suggest_int('early_stopping_patience', 5, 15)
+            patience = trial.suggest_int('early_stopping_patience', 5, 10)
             # patience: 早停的容忍度，若训练在指定的轮数内未见改善，则停止训练，有助于防止过拟合。
 
             # SVR 超参数
