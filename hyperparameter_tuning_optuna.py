@@ -22,8 +22,8 @@ def main():
     print(f"使用设备: {device}")
 
     # 数据路径
-    train_path = 'UJIndoorLoc/trainingData_building0.csv'
-    test_path = 'UJIndoorLoc/validationData_building0.csv'
+    train_path = 'UJIndoorLoc/trainingData.csv'
+    test_path = 'UJIndoorLoc/validationData.csv'
 
     # 固定训练参数
     epochs = 200  # 训练轮数
@@ -37,23 +37,47 @@ def main():
     # === 定义优化目标函数 ===
     def objective(trial):
         # Transformer 自编码器超参数
-        model_dim = trial.suggest_categorical('model_dim', [16, 32, 64])
-        num_heads = trial.suggest_categorical('num_heads', [2, 4, 8])
-        num_layers = trial.suggest_categorical('num_layers', [4, 8, 16])
-        dropout = trial.suggest_float('dropout', 0.0, 0.5)
+        model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
+        # model_dim: 模型维度，决定了模型的容量，更大的值意味着更强的学习能力，但也可能导致过拟合。
+
+        num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16])
+        # num_heads: 注意力机制中的头数，更多头数可以捕捉更丰富的信息，但计算量也更大。
+
+        num_layers = trial.suggest_categorical('num_layers', [4, 8, 16, 32])
+        # num_layers: 编码器和解码器中层的数量，层数越多，模型能表达的复杂度越高，但也容易过拟合。
+
+        dropout = trial.suggest_float('dropout', 0.0, 0.1, 0.3, 0.5)
+        # dropout: 防止过拟合的技术，随机丢弃部分神经网络单元。增加dropout比率可以增强模型的泛化能力，但过高可能导致欠拟合。
+
         learning_rate = trial.suggest_float('learning_rate', 0.0001, 0.005, log=True)
-        batch_size = trial.suggest_categorical('batch_size', [64, 128])
+        # learning_rate: 学习率决定了参数更新的步长，过高可能导致训练不稳定，过低可能导致训练速度过慢。
+
+        batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512])
+        # batch_size: 每次训练的样本数量，较大的batch size通常可以提高训练稳定性和效率，但也可能影响模型的泛化能力。
+
         patience = trial.suggest_int('early_stopping_patience', 5, 15)
+        # patience: 早停的容忍度，若训练在指定的轮数内未见改善，则停止训练，有助于防止过拟合。
 
         # SVR 超参数
         svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
+        # svr_kernel: SVR中使用的核函数类型，不同的核函数适用于不同的数据分布。
+
         svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
+        # svr_C: 错误项的惩罚系数。较大的C值可以减少训练误差，但可能增加泛化误差，反之则可能导致训练误差增大。
+
         svr_epsilon = trial.suggest_float('svr_epsilon', 0.0, 1.0)
+        # svr_epsilon: 容忍误差，设置目标函数预测的自由区间，epsilon越大，模型越不敏感。
+
         svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
+        # svr_gamma: 核函数的系数，仅对'rbf', 'poly'和'sigmoid'核有效。'scale'会自动调整，而'auto'使用特征数量的倒数。
+
         # 如果 kernel 是 'poly'，则调优 degree 和 coef0
         if svr_kernel == 'poly':
             svr_degree = trial.suggest_int('svr_degree', 2, 5)
+            # svr_degree: 'poly'核函数的度数，度数越高，函数能拟合更复杂的曲线，但计算量也更大。
+
             svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)
+            # svr_coef0: 'poly'和'sigmoid'核的独立项系数，可以调整决策函数的形状。
         else:
             svr_degree = 3  # 默认值
             svr_coef0 = 0.0  # 默认值
