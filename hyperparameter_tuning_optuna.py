@@ -43,14 +43,14 @@ def main():
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64])
             # model_dim: 模型维度，决定了模型的容量，更大的值意味着更强的学习能力，但也可能导致过拟合。
 
-            # 2. 根据 model_dim 选择合适的 num_heads
-            if model_dim == 16:
-                num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16])
-            elif model_dim == 32:
-                num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16, 32])
-            else:  # model_dim == 64
-                num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16, 32])
+            # 2. 选择 num_heads
+            num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16, 32])
             # num_heads: 注意力机制中的头数，更多头数可以捕捉更丰富的信息，但计算量也更大。
+
+            # 检查 num_heads 是否合理
+            if num_heads > model_dim:
+                # num_heads 不应大于 model_dim，否则会导致模型无法正确运行
+                raise TrialPruned()
 
             # 其余超参数
             num_layers = trial.suggest_categorical('num_layers', [2, 4, 8, 16])
