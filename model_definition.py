@@ -25,24 +25,9 @@ class WiFiTransformerAutoencoder(nn.Module):
         )
         self.encoder_pool = nn.AdaptiveAvgPool1d(1)
         self.decoder_fc = nn.Linear(model_dim, input_dim)
-        self.activation = nn.ReLU()
+        self.activation = nn.ReLU()  # 保持 ReLU 激活函数
 
-        self._reset_parameters()
-
-    def _reset_parameters(self):
-        """
-        初始化模型参数，使用 Xavier 均匀分布。
-        """
-        nn.init.xavier_uniform_(self.encoder_embedding.weight)
-        nn.init.zeros_(self.encoder_embedding.bias)
-        nn.init.xavier_uniform_(self.decoder_fc.weight)
-        nn.init.zeros_(self.decoder_fc.bias)
-
-        for layer in self.transformer_encoder.layers:
-            nn.init.xavier_uniform_(layer.linear1.weight)
-            nn.init.zeros_(layer.linear1.bias)
-            nn.init.xavier_uniform_(layer.linear2.weight)
-            nn.init.zeros_(layer.linear2.bias)
+        # 移除自定义初始化，使用 PyTorch 默认初始化
 
     def encode(self, x):
         """

@@ -9,6 +9,7 @@ from training_and_evaluation import (
     extract_features,
     train_and_evaluate_svr,
     compute_error_distances,
+    NaNLossError
 )
 import optuna
 from optuna.exceptions import TrialPruned
@@ -35,128 +36,145 @@ def main():
 
     # === 定义优化目标函数 ===
     def objective(trial):
-        # Transformer 自编码器超参数
-        model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
-        # model_dim: 模型维度，决定了模型的容量，更大的值意味着更强的学习能力，但也可能导致过拟合。
+        try:
+            # Transformer 自编码器超参数
+            model_dim = trial.suggest_categorical('model_dim', [16, 32, 64])
+            # model_dim: 模型维度，决定了模型的容量，更大的值意味着更强的学习能力，但也可能导致过拟合。
 
-        num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16])
-        # num_heads: 注意力机制中的头数，更多头数可以捕捉更丰富的信息，但计算量也更大。
+            num_heads = trial.suggest_categorical('num_heads', [2, 4, 8])
+            # num_heads: 注意力机制中的头数，更多头数可以捕捉更丰富的信息，但计算量也更大。
 
-        num_layers = trial.suggest_categorical('num_layers', [4, 8, 16, 32])
-        # num_layers: 编码器和解码器中层的数量，层数越多，模型能表达的复杂度越高，但也容易过拟合。
+            num_layers = trial.suggest_categorical('num_layers', [2, 4, 8, 16])
+            # num_layers: 编码器和解码器中层的数量，层数越多，模型能表达的复杂度越高，但也容易过拟合。
 
-        dropout = trial.suggest_float('dropout', 0.0, 0.3)
-        # dropout: 防止过拟合的技术，随机丢弃部分神经网络单元。增加dropout比率可以增强模型的泛化能力，但过高可能导致欠拟合。
+            dropout = trial.suggest_float('dropout', 0.0, 0.3)
+            # dropout: 防止过拟合的技术，随机丢弃部分神经网络单元。增加dropout比率可以增强模型的泛化能力，但过高可能导致欠拟合。
 
-        learning_rate = trial.suggest_float('learning_rate', 0.0001, 0.005, log=True)
-        # learning_rate: 学习率决定了参数更新的步长，过高可能导致训练不稳定，过低可能导致训练速度过慢。
+            learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-3, log=True)
+            # learning_rate: 学习率决定了参数更新的步长，过高可能导致训练不稳定，过低可能导致训练速度过慢。
 
-        batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512])
-        # batch_size: 每次训练的样本数量，较大的batch size通常可以提高训练稳定性和效率，但也可能影响模型的泛化能力。
+            batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512])
+            # batch_size: 每次训练的样本数量，较大的batch size通常可以提高训练稳定性和效率，但也可能影响模型的泛化能力。
 
-        patience = trial.suggest_int('early_stopping_patience', 5, 15)
-        # patience: 早停的容忍度，若训练在指定的轮数内未见改善，则停止训练，有助于防止过拟合。
+            patience = trial.suggest_int('early_stopping_patience', 5, 15)
+            # patience: 早停的容忍度，若训练在指定的轮数内未见改善，则停止训练，有助于防止过拟合。
 
-        # SVR 超参数
-        svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
-        # svr_kernel: SVR中使用的核函数类型，不同的核函数适用于不同的数据分布。
+            # SVR 超参数
+            svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
+            # svr_kernel: SVR中使用的核函数类型，不同的核函数适用于不同的数据分布。
 
-        svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
-        # svr_C: 错误项的惩罚系数。较大的C值可以减少训练误差，但可能增加泛化误差，反之则可能导致训练误差增大。
+            svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
+            # svr_C: 错误项的惩罚系数。较大的C值可以减少训练误差，但可能增加泛化误差，反之则可能导致训练误差增大。
 
-        svr_epsilon = trial.suggest_float('svr_epsilon', 0.0, 1.0)
-        # svr_epsilon: 容忍误差，设置目标函数预测的自由区间，epsilon越大，模型越不敏感。
+            svr_epsilon = trial.suggest_float('svr_epsilon', 0.0, 1.0)
+            # svr_epsilon: 容忍误差，设置目标函数预测的自由区间，epsilon越大，模型越不敏感。
 
-        svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
-        # svr_gamma: 核函数的系数，仅对'rbf', 'poly'和'sigmoid'核有效。'scale'会自动调整，而'auto'使用特征数量的倒数。
+            svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
+            # svr_gamma: 核函数的系数，仅对'rbf', 'poly'和'sigmoid'核有效。'scale'会自动调整，而'auto'使用特征数量的倒数。
 
-        # 如果 kernel 是 'poly'，则调优 degree 和 coef0
-        if svr_kernel == 'poly':
-            svr_degree = trial.suggest_int('svr_degree', 2, 5)
-            # svr_degree: 'poly'核函数的度数，度数越高，函数能拟合更复杂的曲线，但计算量也更大。
+            # 如果 kernel 是 'poly'，则调优 degree 和 coef0
+            if svr_kernel == 'poly':
+                svr_degree = trial.suggest_int('svr_degree', 2, 5)
+                # svr_degree: 'poly'核函数的度数，度数越高，函数能拟合更复杂的曲线，但计算量也更大。
 
-            svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)
-            # svr_coef0: 'poly'和'sigmoid'核的独立项系数，可以调整决策函数的形状。
-        else:
-            svr_degree = 3  # 默认值
-            svr_coef0 = 0.0  # 默认值
+                svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)
+                # svr_coef0: 'poly'和'sigmoid'核的独立项系数，可以调整决策函数的形状。
+            else:
+                svr_degree = 3  # 默认值
+                svr_coef0 = 0.0  # 默认值
 
-        # 收集当前超参数组合
-        current_params = {
-            'model_dim': model_dim,
-            'num_heads': num_heads,
-            'num_layers': num_layers,
-            'dropout': dropout,
-            'learning_rate': learning_rate,
-            'batch_size': batch_size,
-            'early_stopping_patience': patience,
-            'svr_kernel': svr_kernel,
-            'svr_C': svr_C,
-            'svr_epsilon': svr_epsilon,
-            'svr_gamma': svr_gamma,
-            'svr_degree': svr_degree,
-            'svr_coef0': svr_coef0,
-        }
+            # 收集当前超参数组合
+            current_params = {
+                'model_dim': model_dim,
+                'num_heads': num_heads,
+                'num_layers': num_layers,
+                'dropout': dropout,
+                'learning_rate': learning_rate,
+                'batch_size': batch_size,
+                'early_stopping_patience': patience,
+                'svr_kernel': svr_kernel,
+                'svr_C': svr_C,
+                'svr_epsilon': svr_epsilon,
+                'svr_gamma': svr_gamma,
+                'svr_degree': svr_degree,
+                'svr_coef0': svr_coef0,
+            }
 
-        # 打印当前超参数组合
-        print(f"\n当前超参数组合：\n{json.dumps(current_params, indent=4, ensure_ascii=False)}")
+            # 打印当前超参数组合
+            print(f"\n当前超参数组合：\n{json.dumps(current_params, indent=4, ensure_ascii=False)}")
 
-        # 初始化 Transformer 自编码器模型
-        model = WiFiTransformerAutoencoder(
-            model_dim=model_dim,
-            num_heads=num_heads,
-            num_layers=num_layers,
-            dropout=dropout
-        ).to(device)
+            # 初始化 Transformer 自编码器模型
+            model = WiFiTransformerAutoencoder(
+                model_dim=model_dim,
+                num_heads=num_heads,
+                num_layers=num_layers,
+                dropout=dropout
+            ).to(device)
 
-        # 训练自编码器
-        model = train_autoencoder(
-            model, X_train, X_val,
-            device=device,
-            epochs=epochs,
-            batch_size=batch_size,
-            learning_rate=learning_rate,
-            early_stopping_patience=patience
-        )
+            # 训练自编码器
+            model = train_autoencoder(
+                model, X_train, X_val,
+                device=device,
+                epochs=epochs,
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                early_stopping_patience=patience
+            )
 
-        # 提取特征
-        X_train_features = extract_features(model, X_train, device=device, batch_size=batch_size)
-        X_test_features = extract_features(model, X_test, device=device, batch_size=batch_size)
+            # 提取特征
+            X_train_features = extract_features(model, X_train, device=device, batch_size=batch_size)
+            X_test_features = extract_features(model, X_test, device=device, batch_size=batch_size)
 
-        # 逆标准化目标变量
-        y_train_original = scaler_y.inverse_transform(y_train)
-        y_test_original = scaler_y.inverse_transform(y_test)
+            # 检查提取的特征中是否存在 NaN
+            if np.isnan(X_train_features).any() or np.isnan(X_test_features).any():
+                print("提取的特征中包含 NaN，试验将被剪枝。")
+                raise TrialPruned()
 
-        # 定义 SVR 参数
-        svr_params = {
-            'kernel': svr_kernel,
-            'C': svr_C,
-            'epsilon': svr_epsilon,
-            'gamma': svr_gamma,
-            'degree': svr_degree,
-            'coef0': svr_coef0,
-        }
+            # 逆标准化目标变量
+            y_train_original = scaler_y.inverse_transform(y_train)
+            y_test_original = scaler_y.inverse_transform(y_test)
 
-        # 训练 SVR 模型
-        svr_model = train_and_evaluate_svr(
-            X_train_features, y_train_original,
-            X_test_features, y_test_original,
-            svr_params=svr_params
-        )
+            # 定义 SVR 参数
+            svr_params_dict = {
+                'kernel': svr_kernel,
+                'C': svr_C,
+                'epsilon': svr_epsilon,
+                'gamma': svr_gamma,
+                'degree': svr_degree,
+                'coef0': svr_coef0,
+            }
 
-        # 预测并评估
-        y_pred = svr_model.predict(X_test_features)
-        error_distances = compute_error_distances(y_test_original, y_pred)
-        mean_error_distance = np.mean(error_distances)
+            # 训练 SVR 模型
+            svr_model = train_and_evaluate_svr(
+                X_train_features, y_train_original,
+                X_test_features, y_test_original,
+                svr_params=svr_params_dict
+            )
 
-        # 报告中间结果并检查是否应该剪枝
-        trial.report(mean_error_distance, step=0)
+            # 预测并评估
+            y_pred = svr_model.predict(X_test_features)
+            error_distances = compute_error_distances(y_test_original, y_pred)
+            mean_error_distance = np.mean(error_distances)
 
-        if trial.should_prune():
+            # 报告中间结果并检查是否应该剪枝
+            trial.report(mean_error_distance, step=0)
+
+            if trial.should_prune():
+                print("试验被剪枝。")
+                raise TrialPruned()
+
+            # 返回要最小化的目标值
+            return mean_error_distance
+
+        except NaNLossError:
+            print("试验因 NaN 损失而被剪枝。")
             raise TrialPruned()
-
-        # 返回要最小化的目标值
-        return mean_error_distance
+        except ValueError as e:
+            if 'NaN' in str(e):
+                print("试验因数据中存在 NaN 而被剪枝。")
+                raise TrialPruned()
+            else:
+                raise e
 
     # === 创建和运行优化研究 ===
     study = optuna.create_study(direction='minimize', pruner=optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=10))
@@ -207,12 +225,17 @@ def main():
     X_train_features = extract_features(best_model, X_train, device=device, batch_size=batch_size)
     X_test_features = extract_features(best_model, X_test, device=device, batch_size=batch_size)
 
+    # 检查提取的特征中是否存在 NaN
+    if np.isnan(X_train_features).any() or np.isnan(X_test_features).any():
+        print("提取的特征中包含 NaN，无法训练最佳模型。")
+        exit(1)
+
     # 逆标准化目标变量
     y_train_original = scaler_y.inverse_transform(y_train)
     y_test_original = scaler_y.inverse_transform(y_test)
 
     # 定义最佳 SVR 参数
-    svr_params = {
+    svr_params_best = {
         'kernel': svr_kernel,
         'C': svr_C,
         'epsilon': svr_epsilon,
@@ -225,7 +248,7 @@ def main():
     best_svr_model = train_and_evaluate_svr(
         X_train_features, y_train_original,
         X_test_features, y_test_original,
-        svr_params=svr_params
+        svr_params=svr_params_best
     )
 
     # === 保存模型和参数 ===

@@ -31,6 +31,10 @@ def load_and_preprocess_data(train_path, test_path):
     train_features = train_data.iloc[:, 0:520].replace(100, -105)
     test_features = test_data.iloc[:, 0:520].replace(100, -105)
 
+    # 处理其他可能的缺失值（如NaN）
+    train_features = train_features.fillna(-105)
+    test_features = test_features.fillna(-105)
+
     # 提取目标变量（经度、纬度和楼层）
     y_train_full = train_data[['LONGITUDE', 'LATITUDE', 'FLOOR']].values
     y_test = test_data[['LONGITUDE', 'LATITUDE', 'FLOOR']].values
