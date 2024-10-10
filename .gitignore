@@ -127,3 +127,8 @@ dmypy.json
 # JetBrains IDEs
 .idea/
 
+# 忽略所有的 pkl 和 pth 文件
+*.pkl
+*.pth
+
+
