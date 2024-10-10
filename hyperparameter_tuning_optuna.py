@@ -44,7 +44,7 @@ def main():
             # model_dim: 模型维度，决定了模型的容量，更大的值意味着更强的学习能力，但也可能导致过拟合。
 
             # 2. 选择 num_heads
-            num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16, 32])
+            num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16])
             # num_heads: 注意力机制中的头数，更多头数可以捕捉更丰富的信息，但计算量也更大。
 
             # 检查 num_heads 是否合理
