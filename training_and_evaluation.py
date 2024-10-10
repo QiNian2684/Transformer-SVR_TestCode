@@ -68,6 +68,7 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
 
     best_val_loss = float('inf')
     patience_counter = 0
+    best_model_state_dict = None  # 用于保存最佳模型参数
 
     for epoch in range(epochs):
         model.train()
@@ -96,12 +97,17 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
         avg_val_loss = np.mean(val_losses)
         print(f"Epoch [{epoch+1}/{epochs}], Train Loss: {avg_train_loss:.6f}, Val Loss: {avg_val_loss:.6f}")
 
+        # 检查是否存在 NaN
+        if np.isnan(avg_train_loss) or np.isnan(avg_val_loss):
+            print("发现 NaN 损失，停止训练。")
+            break
+
         # 早停检查
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             patience_counter = 0
-            # 保存最佳模型参数
-            torch.save(model.state_dict(), 'best_transformer_autoencoder.pth')
+            # 保存最佳模型参数到内存
+            best_model_state_dict = model.state_dict()
         else:
             patience_counter += 1
             if patience_counter >= early_stopping_patience:
@@ -109,7 +115,11 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
                 break
 
     # 加载最佳模型参数
-    model.load_state_dict(torch.load('best_transformer_autoencoder.pth'))
+    if best_model_state_dict is not None:
+        model.load_state_dict(best_model_state_dict)
+    else:
+        print("未找到最佳模型参数，使用最终的模型参数。")
+
     return model
 
 def extract_features(model, X_data, device, batch_size=256):
@@ -136,7 +146,6 @@ def extract_features(model, X_data, device, batch_size=256):
             encoded = model.encode(X_batch)
             features.append(encoded.cpu().numpy())
     return np.vstack(features)
-
 
 def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, svr_params=None, FLOOR_HEIGHT=3.0):
     """

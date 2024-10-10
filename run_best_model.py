@@ -20,7 +20,7 @@ from mpl_toolkits.mplot3d import Axes3D  # 引入3D绘图工具包
 
 def main():
     # 固定训练轮数
-    epochs = 100  # 根据超参数调优的最佳轮数进行调整
+    epochs = 200  # 根据超参数调优的最佳轮数进行调整
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")

@@ -52,4 +52,10 @@ def load_and_preprocess_data(train_path, test_path):
     y_val = scaler_y.transform(y_val)
     y_test = scaler_y.transform(y_test)
 
+    # 检查数据中是否存在 NaN 或无穷值
+    for name, data in [('X_train', X_train), ('X_val', X_val), ('X_test', X_test),
+                      ('y_train', y_train), ('y_val', y_val), ('y_test', y_test)]:
+        if np.isnan(data).any() or np.isinf(data).any():
+            raise ValueError(f"{name} 包含 NaN 或无穷值。请检查数据预处理步骤。")
+
     return X_train, y_train, X_val, y_val, X_test, y_test, scaler_X, scaler_y

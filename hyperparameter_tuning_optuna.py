@@ -6,7 +6,6 @@ from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
 from training_and_evaluation import (
     train_autoencoder,
-
     extract_features,
     train_and_evaluate_svr,
     compute_error_distances,
@@ -29,7 +28,6 @@ def main():
     # 固定训练参数
     epochs = 200  # 训练轮数
     n_trials = 300  # Optuna 试验次数，根据计算资源调整
-
 
     # === 数据加载与预处理 ===
     print("加载并预处理数据...")
@@ -185,8 +183,8 @@ def main():
     svr_C = best_params['svr_C']
     svr_epsilon = best_params['svr_epsilon']
     svr_gamma = best_params['svr_gamma']
-    svr_degree = best_params['svr_degree']
-    svr_coef0 = best_params['svr_coef0']
+    svr_degree = best_params.get('svr_degree', 3)  # 如果不是poly核，默认degree为3
+    svr_coef0 = best_params.get('svr_coef0', 0.0)  # 如果不是poly核，默认coef0为0.0
 
     # 初始化并训练最佳模型
     best_model = WiFiTransformerAutoencoder(
