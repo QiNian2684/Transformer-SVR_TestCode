@@ -46,7 +46,7 @@ def main():
         num_layers = trial.suggest_categorical('num_layers', [4, 8, 16, 32])
         # num_layers: 编码器和解码器中层的数量，层数越多，模型能表达的复杂度越高，但也容易过拟合。
 
-        dropout = trial.suggest_float('dropout', 0.0, 0.1, 0.3, 0.5)
+        dropout = trial.suggest_float('dropout', 0.0, 0.3)
         # dropout: 防止过拟合的技术，随机丢弃部分神经网络单元。增加dropout比率可以增强模型的泛化能力，但过高可能导致欠拟合。
 
         learning_rate = trial.suggest_float('learning_rate', 0.0001, 0.005, log=True)
