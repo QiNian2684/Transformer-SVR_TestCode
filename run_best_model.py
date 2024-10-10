@@ -20,7 +20,7 @@ from mpl_toolkits.mplot3d import Axes3D  # 引入3D绘图工具包
 
 def main():
     # 固定训练轮数
-    epochs = 100  # 要根据超参数脚本中的最佳轮数进行调整
+    epochs = 100  # 根据超参数调优的最佳轮数进行调整
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"使用设备: {device}")
@@ -40,7 +40,7 @@ def main():
     with open(best_hyperparams_path, 'r', encoding='utf-8') as f:
         best_params = json.load(f)
 
-    print("加载到的最优超参数组合：")
+    print("\n加载到的最优超参数组合：")
     print(json.dumps(best_params, indent=4, ensure_ascii=False))
 
     # 提取超参数
@@ -51,11 +51,20 @@ def main():
     learning_rate = best_params['learning_rate']
     batch_size = best_params['batch_size']
     patience = best_params['early_stopping_patience']
+    svr_kernel = best_params['svr_kernel']
     svr_C = best_params['svr_C']
     svr_epsilon = best_params['svr_epsilon']
+    svr_gamma = best_params['svr_gamma']
+    # 如果 kernel 是 'poly'，需要提取 degree 和 coef0
+    if svr_kernel == 'poly':
+        svr_degree = best_params['svr_degree']
+        svr_coef0 = best_params['svr_coef0']
+    else:
+        svr_degree = 3  # 默认值
+        svr_coef0 = 0.0  # 默认值
 
     # 3. 初始化 Transformer 自编码器模型
-    print("初始化 Transformer 自编码器模型...")
+    print("\n初始化 Transformer 自编码器模型...")
     model = WiFiTransformerAutoencoder(
         model_dim=model_dim,
         num_heads=num_heads,
@@ -64,7 +73,7 @@ def main():
     ).to(device)
 
     # 4. 训练 Transformer 自编码器模型
-    print("训练 Transformer 自编码器模型...")
+    print("\n训练 Transformer 自编码器模型...")
     model = train_autoencoder(
         model, X_train, X_val,
         device=device,
@@ -75,7 +84,7 @@ def main():
     )
 
     # 5. 提取特征
-    print("提取训练和测试特征...")
+    print("\n提取训练和测试特征...")
     X_train_features = extract_features(model, X_train, device=device, batch_size=batch_size)
     X_val_features = extract_features(model, X_val, device=device, batch_size=batch_size)
     X_test_features = extract_features(model, X_test, device=device, batch_size=batch_size)
@@ -87,13 +96,16 @@ def main():
 
     # 7. 定义 SVR 参数
     svr_params = {
-        'kernel': 'rbf',
+        'kernel': svr_kernel,
         'C': svr_C,
-        'epsilon': svr_epsilon
+        'epsilon': svr_epsilon,
+        'gamma': svr_gamma,
+        'degree': svr_degree,
+        'coef0': svr_coef0
     }
 
     # 8. 训练并评估 SVR 模型
-    print("训练并评估 SVR 回归模型...")
+    print("\n训练并评估 SVR 回归模型...")
     svr_model = train_and_evaluate_svr(
         X_train_features, y_train_original,
         X_test_features, y_test_original,
@@ -101,7 +113,7 @@ def main():
     )
 
     # 9. 预测并评估
-    print("预测并计算评估指标...")
+    print("\n预测并计算评估指标...")
     y_pred = svr_model.predict(X_test_features)
 
     # 轮廓预测：四舍五入楼层
@@ -115,17 +127,20 @@ def main():
     mean_error_distance = np.mean(error_distances)
     median_error_distance = np.median(error_distances)
 
-    print(f"评估结果：")
-    print(f"MSE: {mse:.6f}, MAE: {mae:.6f}, R^2 Score: {r2:.6f}")
+    print("\n评估结果：")
+    print(f"MSE: {mse:.6f}")
+    print(f"MAE: {mae:.6f}")
+    print(f"R^2 Score: {r2:.6f}")
     print(f"平均误差距离（米）: {mean_error_distance:.2f}")
     print(f"中位数误差距离（米）: {median_error_distance:.2f}")
 
     # 分别评估每个目标变量
+    print("\n各目标变量的评估结果：")
     for i, target in enumerate(['LONGITUDE', 'LATITUDE', 'FLOOR']):
-        mse = mean_squared_error(y_test_original[:, i], y_pred[:, i])
-        mae = mean_absolute_error(y_test_original[:, i], y_pred[:, i])
-        r2 = r2_score(y_test_original[:, i], y_pred[:, i])
-        print(f"{target} - MSE: {mse:.6f}, MAE: {mae:.6f}, R^2 Score: {r2:.6f}")
+        mse_i = mean_squared_error(y_test_original[:, i], y_pred[:, i])
+        mae_i = mean_absolute_error(y_test_original[:, i], y_pred[:, i])
+        r2_i = r2_score(y_test_original[:, i], y_pred[:, i])
+        print(f"{target} - MSE: {mse_i:.6f}, MAE: {mae_i:.6f}, R^2 Score: {r2_i:.6f}")
 
     # 计算误差距离并生成3D误差散点图
     error_x = y_pred[:, 0] - y_test_original[:, 0]
@@ -133,7 +148,8 @@ def main():
     error_floor = y_pred[:, 2] - y_test_original[:, 2]
 
     # 将楼层误差转换为米
-    error_z = error_floor * 4
+    FLOOR_HEIGHT = 3  # 根据您的设定，每层楼的高度
+    error_z = error_floor * FLOOR_HEIGHT
 
     # 配置 Matplotlib 使用支持中文的字体
     plt.rcParams['font.sans-serif'] = ['SimHei']  # 或者 ['Microsoft YaHei']，根据您的系统字体选择
@@ -150,48 +166,14 @@ def main():
     cbar = plt.colorbar(scatter, ax=ax, pad=0.1)
     cbar.set_label('误差距离 (米)')
 
-    ax.set_title('3D Prediction Errors')
-    ax.set_xlabel('Error in X coordinate (meters)')
-    ax.set_ylabel('Error in Y coordinate (meters)')
-    ax.set_zlabel('Error in Z coordinate (meters)')  # Z 代表垂直误差
+    ax.set_title('3D 预测误差散点图')
+    ax.set_xlabel('经度误差 (米)')
+    ax.set_ylabel('纬度误差 (米)')
+    ax.set_zlabel('高度误差 (米)')  # Z 代表垂直误差
 
     plt.show()
 
-    # 10. 保存模型和参数
-    print("保存模型和参数...")
-    # 保存 Transformer 自编码器模型
-    transformer_model_path = 'final_transformer_autoencoder.pth'
-    torch.save(model.state_dict(), transformer_model_path)
-    print(f"Transformer 自编码器模型已保存到 {transformer_model_path}")
-
-    # 保存 SVR 模型
-    svr_model_path = 'final_svr_model.pkl'
-    joblib.dump(svr_model, svr_model_path)
-    print(f"SVR 模型已保存到 {svr_model_path}")
-
-    # 保存评估结果
-    evaluation_results = {
-        'MSE': mse,
-        'MAE': mae,
-        'R2_Score': r2,
-        'Mean_Error_Distance': mean_error_distance,
-        'Median_Error_Distance': median_error_distance
-    }
-    evaluation_results_path = 'evaluation_results.json'
-    with open(evaluation_results_path, 'w', encoding='utf-8') as f:
-        json.dump(evaluation_results, f, indent=4, ensure_ascii=False)
-    print(f"评估结果已保存到 {evaluation_results_path}")
-
-    # 保存缩放器（如果需要后续使用）
-    joblib.dump(scaler_X, 'scaler_X.pkl')
-    joblib.dump(scaler_y, 'scaler_y.pkl')
-    print("缩放器已保存到 scaler_X.pkl 和 scaler_y.pkl")
-
-    # 保存最终预测结果（可选）
-    np.savetxt('y_pred_final.csv', y_pred_rounded, delimiter=',', header='LONGITUDE,LATITUDE,FLOOR', comments='')
-    print("预测结果已保存到 y_pred_final.csv")
-
-    print("模型训练和评估完成。")
+    print("\n模型训练和评估完成。")
 
 
 if __name__ == '__main__':

@@ -2,8 +2,6 @@
 
 import torch
 import numpy as np
-from sqlalchemy.sql.operators import truediv
-
 from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
 from training_and_evaluation import (
@@ -48,8 +46,17 @@ def main():
         patience = trial.suggest_int('early_stopping_patience', 5, 15)
 
         # SVR 超参数
+        svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
         svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
         svr_epsilon = trial.suggest_float('svr_epsilon', 0.0, 1.0)
+        svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
+        # 如果 kernel 是 'poly'，则调优 degree 和 coef0
+        if svr_kernel == 'poly':
+            svr_degree = trial.suggest_int('svr_degree', 2, 5)
+            svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)
+        else:
+            svr_degree = 3  # 默认值
+            svr_coef0 = 0.0  # 默认值
 
         # 收集当前超参数组合
         current_params = {
@@ -60,8 +67,12 @@ def main():
             'learning_rate': learning_rate,
             'batch_size': batch_size,
             'early_stopping_patience': patience,
+            'svr_kernel': svr_kernel,
             'svr_C': svr_C,
-            'svr_epsilon': svr_epsilon
+            'svr_epsilon': svr_epsilon,
+            'svr_gamma': svr_gamma,
+            'svr_degree': svr_degree,
+            'svr_coef0': svr_coef0,
         }
 
         # 打印当前超参数组合
@@ -95,9 +106,12 @@ def main():
 
         # 定义 SVR 参数
         svr_params = {
-            'kernel': 'rbf',
+            'kernel': svr_kernel,
             'C': svr_C,
-            'epsilon': svr_epsilon
+            'epsilon': svr_epsilon,
+            'gamma': svr_gamma,
+            'degree': svr_degree,
+            'coef0': svr_coef0,
         }
 
         # 训练 SVR 模型
@@ -142,8 +156,12 @@ def main():
     learning_rate = best_params['learning_rate']
     batch_size = best_params['batch_size']
     patience = best_params['early_stopping_patience']
+    svr_kernel = best_params['svr_kernel']
     svr_C = best_params['svr_C']
     svr_epsilon = best_params['svr_epsilon']
+    svr_gamma = best_params['svr_gamma']
+    svr_degree = best_params['svr_degree']
+    svr_coef0 = best_params['svr_coef0']
 
     # 初始化并训练最佳模型
     best_model = WiFiTransformerAutoencoder(
@@ -172,9 +190,12 @@ def main():
 
     # 定义最佳 SVR 参数
     svr_params = {
-        'kernel': 'rbf',
+        'kernel': svr_kernel,
         'C': svr_C,
-        'epsilon': svr_epsilon
+        'epsilon': svr_epsilon,
+        'gamma': svr_gamma,
+        'degree': svr_degree,
+        'coef0': svr_coef0,
     }
 
     # 训练最佳 SVR 模型

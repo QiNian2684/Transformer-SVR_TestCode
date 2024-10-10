@@ -138,7 +138,7 @@ def extract_features(model, X_data, device, batch_size=256):
     return np.vstack(features)
 
 
-def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, svr_params=None):
+def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, svr_params=None, FLOOR_HEIGHT=3.0):
     """
     训练并评估 SVR 模型。
 
@@ -148,6 +148,7 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
     - X_test_features: 测试集特征
     - y_test: 测试集目标变量
     - svr_params: SVR模型的参数字典（可选）
+    - FLOOR_HEIGHT: 楼层高度，用于误差计算（默认为3.0米）
 
     返回：
     - best_svr: 训练好的 SVR 模型
@@ -157,7 +158,8 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
         param_dist = {
             'estimator__kernel': ['rbf', 'linear'],
             'estimator__C': [0.1, 1, 10, 100, 1000],
-            'estimator__epsilon': [0.05, 0.1, 0.2, 0.5, 1.0]
+            'estimator__epsilon': [0.05, 0.1, 0.2, 0.5, 1.0],
+            'estimator__gamma': ['scale', 'auto']
         }
         svr = SVR()
         multi_svr = MultiOutputRegressor(svr)
@@ -174,11 +176,17 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
         svr = SVR(**svr_params)
         best_svr = MultiOutputRegressor(svr)
         best_svr.fit(X_train_features, y_train)
+        print("模型训练完成。")
 
+    print("开始预测测试数据...")
     y_pred = best_svr.predict(X_test_features)
+    print("预测完成。")
+
+    print("计算模型性能指标...")
     mse = mean_squared_error(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
+    print("性能指标计算完成。")
 
     # 计算误差距离
     error_distances = compute_error_distances(y_test, y_pred)
@@ -193,23 +201,20 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
     print(f"中位数误差距离（米）: {median_error_distance:.2f}")  # 现在是三维误差
 
     # 保存 SVR 模型
+    print("保存模型...")
     joblib.dump(best_svr, 'best_svr_model.pkl')
+    print("模型已保存。")
 
     # 生成3D预测误差散点图
     error_x = y_pred[:, 0] - y_test[:, 0]
     error_y = y_pred[:, 1] - y_test[:, 1]
     error_floor = y_pred[:, 2] - y_test[:, 2]
-
-    # 将楼层误差转换为米
     error_z = error_floor * FLOOR_HEIGHT  # 使用统一的层高变量
 
     # 创建3D图形
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
-
-    # 计算每个点的误差距离
     error_distance = np.sqrt(error_x ** 2 + error_y ** 2 + error_z ** 2)
-
     scatter = ax.scatter(error_x, error_y, error_z, c=error_distance, cmap='viridis', alpha=0.6)
     cbar = plt.colorbar(scatter, ax=ax, pad=0.1)
     cbar.set_label('Error distance (meters)')
@@ -217,7 +222,7 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
     ax.set_title('3D Prediction Errors')
     ax.set_xlabel('Error in X coordinate (meters)')
     ax.set_ylabel('Error in Y coordinate (meters)')
-    ax.set_zlabel('Error in Z coordinate (meters)')  # Z represents vertical error
+    ax.set_zlabel('Error in Z coordinate (meters)')
 
     plt.show()
 

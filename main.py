@@ -50,11 +50,12 @@ def main():
     y_val_original = scaler_y.inverse_transform(y_val)
     y_test_original = scaler_y.inverse_transform(y_test)
 
-    # 定义 SVR 参数
+    # 定义 SVR 参数，增加 gamma 和 kernel
     svr_params = {
         'kernel': 'rbf',
         'C': 1,
-        'epsilon': 0.1
+        'epsilon': 0.1,
+        'gamma': 'scale'
     }
 
     # 训练 MultiOutputRegressor SVR
