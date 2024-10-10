@@ -223,24 +223,45 @@ def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, s
         joblib.dump(best_svr, 'best_svr_model.pkl')
         print("模型已保存。")
 
-        # 生成3D预测误差散点图
+        # 生成3D预测误差散点图并添加评价指标
         error_x = y_pred[:, 0] - y_test[:, 0]
         error_y = y_pred[:, 1] - y_test[:, 1]
         error_floor = y_pred[:, 2] - y_test[:, 2]
         error_z = error_floor * FLOOR_HEIGHT  # 使用统一的层高变量
 
-        # 创建3D图形
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.add_subplot(111, projection='3d')
+        # 创建图形和网格
+        fig = plt.figure(figsize=(12, 10))
+        gs = fig.add_gridspec(2, 1, height_ratios=[4, 1], hspace=0.4)
+
+        # 第一个子图：3D散点图
+        ax1 = fig.add_subplot(gs[0], projection='3d')
         error_distance = np.sqrt(error_x ** 2 + error_y ** 2 + error_z ** 2)
-        scatter = ax.scatter(error_x, error_y, error_z, c=error_distance, cmap='viridis', alpha=0.6)
-        cbar = plt.colorbar(scatter, ax=ax, pad=0.1)
+        scatter = ax1.scatter(error_x, error_y, error_z, c=error_distance, cmap='viridis', alpha=0.6)
+        cbar = fig.colorbar(scatter, ax=ax1, pad=0.1)
         cbar.set_label('Error distance (meters)')
 
-        ax.set_title('3D Prediction Errors')
-        ax.set_xlabel('Error in X coordinate (meters)')
-        ax.set_ylabel('Error in Y coordinate (meters)')
-        ax.set_zlabel('Error in Z coordinate (meters)')
+        ax1.set_title('3D Prediction Errors')
+        ax1.set_xlabel('Error in X coordinate (meters)')
+        ax1.set_ylabel('Error in Y coordinate (meters)')
+        ax1.set_zlabel('Error in Z coordinate (meters)')
+
+        # 第二个子图：评价指标文本
+        ax2 = fig.add_subplot(gs[1])
+        ax2.axis('off')  # 隐藏坐标轴
+
+        # 格式化评价指标文本
+        metrics_text = (
+            f"SVR Regression Model Evaluation Results:\n"
+            f"MSE: {mse:.6f}\n"
+            f"MAE: {mae:.6f}\n"
+            f"R² Score: {r2:.6f}\n"
+            f"Average Error Distance (meters): {mean_error_distance:.2f}\n"
+            f"Median Error Distance (meters): {median_error_distance:.2f}"
+        )
+
+        # 在子图中添加文本
+        ax2.text(0.5, 0.5, metrics_text, fontsize=12, ha='center', va='center',
+                 bbox=dict(facecolor='white', alpha=0.5))
 
         plt.show()
 
