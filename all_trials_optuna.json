@@ -1,0 +1,1702 @@
+[
+    {
+        "number": 0,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.4620117982293729,
+            "learning_rate": 0.0009701542888229721,
+            "batch_size": 128,
+            "early_stopping_patience": 10,
+            "svr_C": 2.5014948251145026,
+            "svr_epsilon": 0.5000008186894669
+        },
+        "value": 13.662939684414445,
+        "state": "COMPLETE",
+        "duration": 48.882697
+    },
+    {
+        "number": 1,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 4,
+            "num_layers": 4,
+            "dropout": 0.3044224235313732,
+            "learning_rate": 0.0003060034498336088,
+            "batch_size": 128,
+            "early_stopping_patience": 14,
+            "svr_C": 0.29657933308079765,
+            "svr_epsilon": 0.07484496410038866
+        },
+        "value": 17.445288557048013,
+        "state": "COMPLETE",
+        "duration": 29.004033
+    },
+    {
+        "number": 2,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.4029116299748347,
+            "learning_rate": 0.00017749262713307167,
+            "batch_size": 128,
+            "early_stopping_patience": 12,
+            "svr_C": 37.823527234869935,
+            "svr_epsilon": 0.40154052470157153
+        },
+        "value": 8.849230455666143,
+        "state": "COMPLETE",
+        "duration": 47.752125
+    },
+    {
+        "number": 3,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 2,
+            "num_layers": 16,
+            "dropout": 0.21192097581871733,
+            "learning_rate": 0.00020249525620773585,
+            "batch_size": 64,
+            "early_stopping_patience": 9,
+            "svr_C": 0.23988936399806987,
+            "svr_epsilon": 0.13181258074241842
+        },
+        "value": 13.093395640892723,
+        "state": "COMPLETE",
+        "duration": 163.586648
+    },
+    {
+        "number": 4,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 2,
+            "num_layers": 16,
+            "dropout": 0.3104082678952908,
+            "learning_rate": 0.0003134274625509639,
+            "batch_size": 64,
+            "early_stopping_patience": 8,
+            "svr_C": 0.29340968557132663,
+            "svr_epsilon": 0.759688596975655
+        },
+        "value": 17.338403703331693,
+        "state": "COMPLETE",
+        "duration": 165.259646
+    },
+    {
+        "number": 5,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 2,
+            "num_layers": 16,
+            "dropout": 0.3295896128741586,
+            "learning_rate": 0.0005396638460721499,
+            "batch_size": 64,
+            "early_stopping_patience": 14,
+            "svr_C": 92.57987190623393,
+            "svr_epsilon": 0.8497143859876929
+        },
+        "value": 32.32044322082327,
+        "state": "COMPLETE",
+        "duration": 28.191098
+    },
+    {
+        "number": 6,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 16,
+            "dropout": 0.075592279050889,
+            "learning_rate": 0.00038016514931424897,
+            "batch_size": 64,
+            "early_stopping_patience": 15,
+            "svr_C": 0.28750825486144965,
+            "svr_epsilon": 0.1135360864658912
+        },
+        "value": 29.4943651172162,
+        "state": "COMPLETE",
+        "duration": 43.997463
+    },
+    {
+        "number": 7,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 4,
+            "num_layers": 16,
+            "dropout": 0.08393219418135234,
+            "learning_rate": 0.00024182612918385976,
+            "batch_size": 64,
+            "early_stopping_patience": 15,
+            "svr_C": 0.8919031306410815,
+            "svr_epsilon": 0.22806597124133976
+        },
+        "value": 11.564010628851982,
+        "state": "COMPLETE",
+        "duration": 159.46657
+    },
+    {
+        "number": 8,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 4,
+            "num_layers": 4,
+            "dropout": 0.4136486854084861,
+            "learning_rate": 0.000261437614562492,
+            "batch_size": 128,
+            "early_stopping_patience": 15,
+            "svr_C": 1.9801247537450741,
+            "svr_epsilon": 0.7411497565929244
+        },
+        "value": 12.339008363104208,
+        "state": "COMPLETE",
+        "duration": 29.132173
+    },
+    {
+        "number": 9,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.4075956902821635,
+            "learning_rate": 0.0005755499320638319,
+            "batch_size": 128,
+            "early_stopping_patience": 9,
+            "svr_C": 7.5617470978159425,
+            "svr_epsilon": 0.5625901296032324
+        },
+        "value": 10.266963639252827,
+        "state": "COMPLETE",
+        "duration": 28.455454
+    },
+    {
+        "number": 10,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.18840008417031012,
+            "learning_rate": 0.00010640133526519787,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 37.28375224661256,
+            "svr_epsilon": 0.3381912422381848
+        },
+        "value": 8.466909772244412,
+        "state": "COMPLETE",
+        "duration": 54.442397
+    },
+    {
+        "number": 11,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.19686492885111553,
+            "learning_rate": 0.00010159895915072488,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 40.87105120376802,
+            "svr_epsilon": 0.3253918479065947
+        },
+        "value": 9.24094938096264,
+        "state": "COMPLETE",
+        "duration": 54.734657
+    },
+    {
+        "number": 12,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.13427156102121507,
+            "learning_rate": 0.00011662037998888896,
+            "batch_size": 128,
+            "early_stopping_patience": 12,
+            "svr_C": 14.482719208389685,
+            "svr_epsilon": 0.33156746074926224
+        },
+        "value": 9.13948897616566,
+        "state": "COMPLETE",
+        "duration": 54.05905
+    },
+    {
+        "number": 13,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.00782612735694943,
+            "learning_rate": 0.0001576454496605107,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 20.692512717690455,
+            "svr_epsilon": 0.36228346906602316
+        },
+        "value": 8.19526346975482,
+        "state": "COMPLETE",
+        "duration": 53.846063
+    },
+    {
+        "number": 14,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.03698931748098453,
+            "learning_rate": 0.00014483106741463203,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 9.376568443688864,
+            "svr_epsilon": 0.5592530588815168
+        },
+        "value": 8.571009714245951,
+        "state": "COMPLETE",
+        "duration": 54.694127
+    },
+    {
+        "number": 15,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.005489770955303494,
+            "learning_rate": 0.00014254214650763012,
+            "batch_size": 128,
+            "early_stopping_patience": 7,
+            "svr_C": 22.753851193057645,
+            "svr_epsilon": 0.24421682011650023
+        },
+        "value": 8.847969410197043,
+        "state": "COMPLETE",
+        "duration": 53.972176
+    },
+    {
+        "number": 16,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.1392564761434563,
+            "learning_rate": 0.00013408590505920105,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 69.48805321055264,
+            "svr_epsilon": 0.989876287581509
+        },
+        "value": 7.976907026942414,
+        "state": "COMPLETE",
+        "duration": 53.916111
+    },
+    {
+        "number": 17,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.1201440426667479,
+            "learning_rate": 0.00016804228094850432,
+            "batch_size": 128,
+            "early_stopping_patience": 7,
+            "svr_C": 87.31445114691863,
+            "svr_epsilon": 0.9132892019435914
+        },
+        "value": 8.971225261120209,
+        "state": "COMPLETE",
+        "duration": 54.478975
+    },
+    {
+        "number": 18,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.14263253180679658,
+            "learning_rate": 0.00013622341489097733,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 4.557987379956666,
+            "svr_epsilon": 0.6769254990540593
+        },
+        "value": 8.559534396957694,
+        "state": "COMPLETE",
+        "duration": 54.067944
+    },
+    {
+        "number": 19,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 4,
+            "num_layers": 8,
+            "dropout": 0.0030257162016028016,
+            "learning_rate": 0.00021199641690198054,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 0.10427993215738554,
+            "svr_epsilon": 0.9960600198638239
+        },
+        "value": 17.80728509210218,
+        "state": "COMPLETE",
+        "duration": 47.316155
+    },
+    {
+        "number": 20,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.2583151739517666,
+            "learning_rate": 0.0005019616209322281,
+            "batch_size": 128,
+            "early_stopping_patience": 7,
+            "svr_C": 20.366213893257736,
+            "svr_epsilon": 0.6402958409892073
+        },
+        "value": 9.188987539041111,
+        "state": "COMPLETE",
+        "duration": 32.762716
+    },
+    {
+        "number": 21,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.17310668592616663,
+            "learning_rate": 0.00010553259292609871,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 45.51905227325384,
+            "svr_epsilon": 0.43344455588604
+        },
+        "value": 8.62267557504884,
+        "state": "COMPLETE",
+        "duration": 54.942755
+    },
+    {
+        "number": 22,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.2520968348298489,
+            "learning_rate": 0.00012641232075059526,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 43.13917456684216,
+            "svr_epsilon": 0.242651415072153
+        },
+        "value": 8.398152761822685,
+        "state": "COMPLETE",
+        "duration": 53.61996
+    },
+    {
+        "number": 23,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.257413427484772,
+            "learning_rate": 0.00013272099739490217,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 62.35874061381337,
+            "svr_epsilon": 0.22333388184465128
+        },
+        "value": 8.773332976488724,
+        "state": "COMPLETE",
+        "duration": 54.15393
+    },
+    {
+        "number": 24,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.07102541627125677,
+            "learning_rate": 0.00017083648395802478,
+            "batch_size": 128,
+            "early_stopping_patience": 8,
+            "svr_C": 21.806617975730777,
+            "svr_epsilon": 0.009283071438438928
+        },
+        "value": 8.185703983718273,
+        "state": "COMPLETE",
+        "duration": 54.709154
+    },
+    {
+        "number": 25,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.0647073185839622,
+            "learning_rate": 0.00016658904305738613,
+            "batch_size": 128,
+            "early_stopping_patience": 8,
+            "svr_C": 12.083885868337264,
+            "svr_epsilon": 0.0301106860083521
+        },
+        "value": 8.62535410277802,
+        "state": "COMPLETE",
+        "duration": 54.582284
+    },
+    {
+        "number": 26,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.10656085842948937,
+            "learning_rate": 0.00019752068857180818,
+            "batch_size": 64,
+            "early_stopping_patience": 11,
+            "svr_C": 5.529876262942395,
+            "svr_epsilon": 0.8399873591215002
+        },
+        "value": 9.396560271321356,
+        "state": "COMPLETE",
+        "duration": 102.331118
+    },
+    {
+        "number": 27,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.042129738328247276,
+            "learning_rate": 0.0002609616947552359,
+            "batch_size": 128,
+            "early_stopping_patience": 8,
+            "svr_C": 20.038540100790076,
+            "svr_epsilon": 0.16938244669320712
+        },
+        "value": 8.490355469197706,
+        "state": "COMPLETE",
+        "duration": 54.686521
+    },
+    {
+        "number": 28,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 4,
+            "num_layers": 4,
+            "dropout": 0.037514687436616026,
+            "learning_rate": 0.00016008256072288683,
+            "batch_size": 128,
+            "early_stopping_patience": 9,
+            "svr_C": 26.263208632359532,
+            "svr_epsilon": 0.44781994699487926
+        },
+        "value": 8.957947365279992,
+        "state": "COMPLETE",
+        "duration": 29.102011
+    },
+    {
+        "number": 29,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.15137853281963276,
+            "learning_rate": 0.0009195552034408691,
+            "batch_size": 128,
+            "early_stopping_patience": 7,
+            "svr_C": 2.1429671011336273,
+            "svr_epsilon": 0.011057842685966207
+        },
+        "value": 9.631234385698832,
+        "state": "COMPLETE",
+        "duration": 36.451238
+    },
+    {
+        "number": 30,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.10050391945976145,
+            "learning_rate": 0.0002347616628036479,
+            "batch_size": 128,
+            "early_stopping_patience": 10,
+            "svr_C": 3.355975909316583,
+            "svr_epsilon": 0.5199878530077506
+        },
+        "value": 11.081309407397303,
+        "state": "COMPLETE",
+        "duration": 48.151376
+    },
+    {
+        "number": 31,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.2356249029008931,
+            "learning_rate": 0.00012320527346505018,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 70.5553600627459,
+            "svr_epsilon": 0.2836988070863923
+        },
+        "value": 8.854547364252214,
+        "state": "COMPLETE",
+        "duration": 54.835621
+    },
+    {
+        "number": 32,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.4855330114362962,
+            "learning_rate": 0.00012221532867073067,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 55.1661805797349,
+            "svr_epsilon": 0.07386412788739871
+        },
+        "value": 9.951198376912112,
+        "state": "COMPLETE",
+        "duration": 54.206514
+    },
+    {
+        "number": 33,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.2786023342262041,
+            "learning_rate": 0.00015100681125564605,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 31.115361060854116,
+            "svr_epsilon": 0.3871274339870731
+        },
+        "value": 7.979300199200445,
+        "state": "COMPLETE",
+        "duration": 53.955895
+    },
+    {
+        "number": 34,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.3458882238302088,
+            "learning_rate": 0.0001883796963346666,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 27.83176861520013,
+            "svr_epsilon": 0.405241193198155
+        },
+        "value": 8.43444820214592,
+        "state": "COMPLETE",
+        "duration": 54.645678
+    },
+    {
+        "number": 35,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.2870825023238736,
+            "learning_rate": 0.0001522759574888795,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 14.355800623050056,
+            "svr_epsilon": 0.48837215625509534
+        },
+        "value": 9.60118921183703,
+        "state": "COMPLETE",
+        "duration": 47.949582
+    },
+    {
+        "number": 36,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 2,
+            "num_layers": 16,
+            "dropout": 0.3661721110512808,
+            "learning_rate": 0.00036073485028699184,
+            "batch_size": 64,
+            "early_stopping_patience": 8,
+            "svr_C": 30.92775597877274,
+            "svr_epsilon": 0.6184071371725004
+        },
+        "value": 25.18292253353496,
+        "state": "COMPLETE",
+        "duration": 35.149831
+    },
+    {
+        "number": 37,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.04227889987979819,
+            "learning_rate": 0.00018327476230982446,
+            "batch_size": 128,
+            "early_stopping_patience": 7,
+            "svr_C": 7.977028861588972,
+            "svr_epsilon": 0.15431991450625426
+        },
+        "value": 10.185506896285048,
+        "state": "COMPLETE",
+        "duration": 47.863736
+    },
+    {
+        "number": 38,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 4,
+            "num_layers": 4,
+            "dropout": 0.21714100264316183,
+            "learning_rate": 0.00020721298718950914,
+            "batch_size": 64,
+            "early_stopping_patience": 11,
+            "svr_C": 89.11752598989439,
+            "svr_epsilon": 0.47827693328093146
+        },
+        "value": 8.776067990588656,
+        "state": "COMPLETE",
+        "duration": 54.363188
+    },
+    {
+        "number": 39,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 16,
+            "dropout": 0.07456538655291488,
+            "learning_rate": 0.0002946549617254238,
+            "batch_size": 128,
+            "early_stopping_patience": 13,
+            "svr_C": 0.7621764041956215,
+            "svr_epsilon": 0.37849568244745724
+        },
+        "value": 10.01005926060717,
+        "state": "COMPLETE",
+        "duration": 98.517641
+    },
+    {
+        "number": 40,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.29668365097342614,
+            "learning_rate": 0.00023249003214988583,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 1.215390041027359,
+            "svr_epsilon": 0.6902529236732193
+        },
+        "value": 10.288177021498726,
+        "state": "COMPLETE",
+        "duration": 90.900674
+    },
+    {
+        "number": 41,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.26917272541334525,
+            "learning_rate": 0.00011645277869053527,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 55.835028544136925,
+            "svr_epsilon": 0.1962950004804951
+        },
+        "value": 9.028969452028432,
+        "state": "COMPLETE",
+        "duration": 53.590178
+    },
+    {
+        "number": 42,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.23604373397762574,
+            "learning_rate": 0.00013182702381882676,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 16.462569471652472,
+            "svr_epsilon": 0.09799131822668344
+        },
+        "value": 8.71468732819206,
+        "state": "COMPLETE",
+        "duration": 53.89826
+    },
+    {
+        "number": 43,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.313235771438204,
+            "learning_rate": 0.00015617373831593826,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 37.282347079232785,
+            "svr_epsilon": 0.27688622977385424
+        },
+        "value": 7.870139382872577,
+        "state": "COMPLETE",
+        "duration": 54.732651
+    },
+    {
+        "number": 44,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 16,
+            "dropout": 0.32485166431734824,
+            "learning_rate": 0.0001569347834882059,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 32.870865965184855,
+            "svr_epsilon": 0.28730960389880045
+        },
+        "value": 8.710155836344303,
+        "state": "COMPLETE",
+        "duration": 99.258838
+    },
+    {
+        "number": 45,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.3749865708941006,
+            "learning_rate": 0.00017548667963727813,
+            "batch_size": 128,
+            "early_stopping_patience": 9,
+            "svr_C": 11.407264146023703,
+            "svr_epsilon": 0.28921578542434273
+        },
+        "value": 7.7167474983573285,
+        "state": "COMPLETE",
+        "duration": 53.4885
+    },
+    {
+        "number": 46,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 4,
+            "num_layers": 8,
+            "dropout": 0.43971971776354696,
+            "learning_rate": 0.00017362291658240715,
+            "batch_size": 128,
+            "early_stopping_patience": 9,
+            "svr_C": 10.212420114701763,
+            "svr_epsilon": 0.2822012723674289
+        },
+        "value": 8.897583424708792,
+        "state": "COMPLETE",
+        "duration": 49.054717
+    },
+    {
+        "number": 47,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.3753758539593628,
+            "learning_rate": 0.00011325022527002788,
+            "batch_size": 128,
+            "early_stopping_patience": 11,
+            "svr_C": 6.299635354364956,
+            "svr_epsilon": 0.5361831901469134
+        },
+        "value": 8.308320681657552,
+        "state": "COMPLETE",
+        "duration": 32.457977
+    },
+    {
+        "number": 48,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.3817921877994122,
+            "learning_rate": 0.00021164268978588805,
+            "batch_size": 64,
+            "early_stopping_patience": 9,
+            "svr_C": 71.10619531374022,
+            "svr_epsilon": 0.05818506854256367
+        },
+        "value": 8.573114871215292,
+        "state": "COMPLETE",
+        "duration": 103.728784
+    },
+    {
+        "number": 49,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.33680285856452974,
+            "learning_rate": 0.00014461752128813136,
+            "batch_size": 128,
+            "early_stopping_patience": 10,
+            "svr_C": 41.9897426072505,
+            "svr_epsilon": 0.12898672931368313
+        },
+        "value": 9.419002243763797,
+        "state": "COMPLETE",
+        "duration": 47.953192
+    },
+    {
+        "number": 50,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 16,
+            "dropout": 0.4424543178769084,
+            "learning_rate": 0.00017968442869879998,
+            "batch_size": 128,
+            "early_stopping_patience": 8,
+            "svr_C": 16.671809373141265,
+            "svr_epsilon": 0.33162094903824907
+        },
+        "value": 27.030435172410538,
+        "state": "COMPLETE",
+        "duration": 38.966682
+    },
+    {
+        "number": 51,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.021717275906641437,
+            "learning_rate": 0.00014940704885493954,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 22.462677772659532,
+            "svr_epsilon": 0.374182986454102
+        },
+        "value": 8.948063330516677,
+        "state": "COMPLETE",
+        "duration": 53.681536
+    },
+    {
+        "number": 52,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.35905539403039644,
+            "learning_rate": 0.00015984898059910453,
+            "batch_size": 128,
+            "early_stopping_patience": 10,
+            "svr_C": 31.18765672622867,
+            "svr_epsilon": 0.3887141801103931
+        },
+        "value": 9.335937842176177,
+        "state": "COMPLETE",
+        "duration": 54.072766
+    },
+    {
+        "number": 53,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.28140230149246026,
+            "learning_rate": 0.0001356247026678694,
+            "batch_size": 128,
+            "early_stopping_patience": 7,
+            "svr_C": 99.99979391420281,
+            "svr_epsilon": 0.44448899552720633
+        },
+        "value": 8.873962158582065,
+        "state": "COMPLETE",
+        "duration": 54.764447
+    },
+    {
+        "number": 54,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.31519067790539146,
+            "learning_rate": 0.00019051501884923363,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 10.553182027988722,
+            "svr_epsilon": 0.7994896255561932
+        },
+        "value": 8.783929489656105,
+        "state": "COMPLETE",
+        "duration": 53.958536
+    },
+    {
+        "number": 55,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.39257620530021875,
+            "learning_rate": 0.0001099836202717827,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 46.03818863146773,
+            "svr_epsilon": 0.3053591542294153
+        },
+        "value": 10.166980943415075,
+        "state": "COMPLETE",
+        "duration": 54.489165
+    },
+    {
+        "number": 56,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.06208377916527296,
+            "learning_rate": 0.00022667106355623686,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 13.372940296822785,
+            "svr_epsilon": 0.366884875634314
+        },
+        "value": 9.018441374410925,
+        "state": "COMPLETE",
+        "duration": 54.818827
+    },
+    {
+        "number": 57,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 4,
+            "num_layers": 8,
+            "dropout": 0.018632829407888588,
+            "learning_rate": 0.00010087642246576181,
+            "batch_size": 128,
+            "early_stopping_patience": 9,
+            "svr_C": 22.446461438975923,
+            "svr_epsilon": 0.9753873122735311
+        },
+        "value": 9.732462744729245,
+        "state": "COMPLETE",
+        "duration": 48.015754
+    },
+    {
+        "number": 58,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.0940889860931784,
+            "learning_rate": 0.00016711822877895808,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 17.454418104986456,
+            "svr_epsilon": 0.2107629609634403
+        },
+        "value": 8.175323145670998,
+        "state": "COMPLETE",
+        "duration": 32.767381
+    },
+    {
+        "number": 59,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.1752003901742244,
+            "learning_rate": 0.000272588889840459,
+            "batch_size": 128,
+            "early_stopping_patience": 7,
+            "svr_C": 36.2899944430486,
+            "svr_epsilon": 0.18584302945060135
+        },
+        "value": 8.67285296684059,
+        "state": "COMPLETE",
+        "duration": 33.496477
+    },
+    {
+        "number": 60,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 2,
+            "num_layers": 4,
+            "dropout": 0.10008016885850823,
+            "learning_rate": 0.00017278373898272178,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 16.965752586604953,
+            "svr_epsilon": 0.2413598355251419
+        },
+        "value": 9.898161449858021,
+        "state": "COMPLETE",
+        "duration": 30.673155
+    },
+    {
+        "number": 61,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.1256228662037531,
+            "learning_rate": 0.00014064213764619968,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 51.414069156194216,
+            "svr_epsilon": 0.3463909102142203
+        },
+        "value": 8.076617958230099,
+        "state": "COMPLETE",
+        "duration": 34.33294
+    },
+    {
+        "number": 62,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.12609549094553335,
+            "learning_rate": 0.00013094229829818023,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 68.6287992988791,
+            "svr_epsilon": 0.26359319189634595
+        },
+        "value": 9.547965640442648,
+        "state": "COMPLETE",
+        "duration": 33.558646
+    },
+    {
+        "number": 63,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.15484193300028803,
+            "learning_rate": 0.00014938871699268715,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 47.59607360771834,
+            "svr_epsilon": 0.20285639134268546
+        },
+        "value": 8.657355369686279,
+        "state": "COMPLETE",
+        "duration": 33.406243
+    },
+    {
+        "number": 64,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.08886829605886548,
+            "learning_rate": 0.00014109282179555275,
+            "batch_size": 128,
+            "early_stopping_patience": 5,
+            "svr_C": 27.64699526041052,
+            "svr_epsilon": 0.3402317528986344
+        },
+        "value": 9.008536988766663,
+        "state": "COMPLETE",
+        "duration": 33.862719
+    },
+    {
+        "number": 65,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.11751478404902391,
+            "learning_rate": 0.00016709770074891343,
+            "batch_size": 128,
+            "early_stopping_patience": 6,
+            "svr_C": 56.190953180336344,
+            "svr_epsilon": 0.1504078158691757
+        },
+        "value": 8.227772521547555,
+        "state": "COMPLETE",
+        "duration": 34.045843
+    },
+    {
+        "number": 66,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.20292677220410302,
+            "learning_rate": 0.00012195690359998326,
+            "batch_size": 128,
+            "early_stopping_patience": 8,
+            "svr_C": 35.63223459069996,
+            "svr_epsilon": 0.42199789678333566
+        },
+        "value": 8.690600495228718,
+        "state": "COMPLETE",
+        "duration": 33.560576
+    },
+    {
+        "number": 67,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.05884342198047399,
+            "learning_rate": 0.00019948074598005562,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 76.6302040887209,
+            "svr_epsilon": 0.3262209249315875
+        },
+        "value": 8.040387184929214,
+        "state": "COMPLETE",
+        "duration": 61.723121
+    },
+    {
+        "number": 68,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.14204967417574052,
+            "learning_rate": 0.0002004853648023078,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 67.32412176710889,
+            "svr_epsilon": 0.3188745899719918
+        },
+        "value": 9.075696598717242,
+        "state": "COMPLETE",
+        "duration": 62.451589
+    },
+    {
+        "number": 69,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.16372442368148005,
+            "learning_rate": 0.00045742658029650804,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 84.40621845679621,
+            "svr_epsilon": 0.221414909364271
+        },
+        "value": 9.335740994984143,
+        "state": "COMPLETE",
+        "duration": 54.567435
+    },
+    {
+        "number": 70,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 4,
+            "num_layers": 4,
+            "dropout": 0.3073671968791373,
+            "learning_rate": 0.0007156656948416905,
+            "batch_size": 64,
+            "early_stopping_patience": 14,
+            "svr_C": 50.65551968548812,
+            "svr_epsilon": 0.25563899531852813
+        },
+        "value": 9.170972263961492,
+        "state": "COMPLETE",
+        "duration": 53.470271
+    },
+    {
+        "number": 71,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.05697619051814805,
+            "learning_rate": 0.00016349685124532592,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 79.68511591894311,
+            "svr_epsilon": 0.3513820618255088
+        },
+        "value": 7.566054500935469,
+        "state": "COMPLETE",
+        "duration": 61.719765
+    },
+    {
+        "number": 72,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.059155945897936775,
+            "learning_rate": 0.00013981479726212157,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 80.29394294932062,
+            "svr_epsilon": 0.3514227607285863
+        },
+        "value": 8.875398264552866,
+        "state": "COMPLETE",
+        "duration": 62.375115
+    },
+    {
+        "number": 73,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.08247575350545577,
+            "learning_rate": 0.00022001296629214833,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 39.44963338619464,
+            "svr_epsilon": 0.4664473650151567
+        },
+        "value": 8.270294067986121,
+        "state": "COMPLETE",
+        "duration": 61.812392
+    },
+    {
+        "number": 74,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.11303400518045284,
+            "learning_rate": 0.0001892946598013614,
+            "batch_size": 64,
+            "early_stopping_patience": 7,
+            "svr_C": 60.270329066425155,
+            "svr_epsilon": 0.4108692744705822
+        },
+        "value": 9.00217971476775,
+        "state": "COMPLETE",
+        "duration": 61.692255
+    },
+    {
+        "number": 75,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.08803772027122939,
+            "learning_rate": 0.0002510245992562851,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 25.954547816418387,
+            "svr_epsilon": 0.31565425039428474
+        },
+        "value": 8.01628702355806,
+        "state": "COMPLETE",
+        "duration": 61.492929
+    },
+    {
+        "number": 76,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.055010991487205015,
+            "learning_rate": 0.00025148856304043623,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 99.98958461639107,
+            "svr_epsilon": 0.2762155628425619
+        },
+        "value": 8.481492206703239,
+        "state": "COMPLETE",
+        "duration": 61.623216
+    },
+    {
+        "number": 77,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 2,
+            "num_layers": 4,
+            "dropout": 0.22831696801559814,
+            "learning_rate": 0.00015522958090723188,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 75.9351773436524,
+            "svr_epsilon": 0.3093850446707932
+        },
+        "value": 8.415787219246752,
+        "state": "COMPLETE",
+        "duration": 55.475786
+    },
+    {
+        "number": 78,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.02343616990481437,
+            "learning_rate": 0.0003107012052596646,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 24.824517932138743,
+            "svr_epsilon": 0.39719615754166404
+        },
+        "value": 9.100972012777921,
+        "state": "COMPLETE",
+        "duration": 53.735719
+    },
+    {
+        "number": 79,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 16,
+            "dropout": 0.1283979081596645,
+            "learning_rate": 0.00024698723399842903,
+            "batch_size": 64,
+            "early_stopping_patience": 12,
+            "svr_C": 50.07534701448905,
+            "svr_epsilon": 0.3563164387632252
+        },
+        "value": 8.538064139384957,
+        "state": "COMPLETE",
+        "duration": 185.412504
+    },
+    {
+        "number": 80,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.05186943837411239,
+            "learning_rate": 0.00019831680018741611,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 3.4335788151118476,
+            "svr_epsilon": 0.30007834976793335
+        },
+        "value": 9.357743296443676,
+        "state": "COMPLETE",
+        "duration": 59.762178
+    },
+    {
+        "number": 81,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.09264478899109382,
+            "learning_rate": 0.00027895930754835734,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 28.44526006226246,
+            "svr_epsilon": 0.22194286386763326
+        },
+        "value": 9.16575420100254,
+        "state": "COMPLETE",
+        "duration": 61.369173
+    },
+    {
+        "number": 82,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.4242609340805072,
+            "learning_rate": 0.0003314552103484761,
+            "batch_size": 64,
+            "early_stopping_patience": 7,
+            "svr_C": 36.08039709751153,
+            "svr_epsilon": 0.5934263506528275
+        },
+        "value": 8.712380393817433,
+        "state": "COMPLETE",
+        "duration": 61.121789
+    },
+    {
+        "number": 83,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.07490084144930562,
+            "learning_rate": 0.00017786144921525817,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 18.865318564195192,
+            "svr_epsilon": 0.26677713503183875
+        },
+        "value": 7.978133962334657,
+        "state": "COMPLETE",
+        "duration": 61.513931
+    },
+    {
+        "number": 84,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.07253314891078673,
+            "learning_rate": 0.000181683459375039,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 19.241288894360153,
+            "svr_epsilon": 0.3161363286899406
+        },
+        "value": 7.728463607173165,
+        "state": "COMPLETE",
+        "duration": 61.270942
+    },
+    {
+        "number": 85,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.07226840577585147,
+            "learning_rate": 0.00017889677036327664,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 7.388797295581802,
+            "svr_epsilon": 0.2609888508805601
+        },
+        "value": 8.765911108407014,
+        "state": "COMPLETE",
+        "duration": 61.315066
+    },
+    {
+        "number": 86,
+        "params": {
+            "model_dim": 32,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.04053990545587032,
+            "learning_rate": 0.00021130544390326152,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 11.690834111611286,
+            "svr_epsilon": 0.3139621476588151
+        },
+        "value": 8.817429263621955,
+        "state": "COMPLETE",
+        "duration": 53.242642
+    },
+    {
+        "number": 87,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 16,
+            "dropout": 0.2733251630754692,
+            "learning_rate": 0.00018632172410797492,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 13.974456336691794,
+            "svr_epsilon": 0.2828032870420626
+        },
+        "value": 25.636753793317823,
+        "state": "COMPLETE",
+        "duration": 22.306034
+    },
+    {
+        "number": 88,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.34993194842162584,
+            "learning_rate": 0.00016304286963234274,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 0.10054307278060003,
+            "svr_epsilon": 0.9156836875156472
+        },
+        "value": 16.548136868127926,
+        "state": "COMPLETE",
+        "duration": 103.575876
+    },
+    {
+        "number": 89,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 4,
+            "num_layers": 4,
+            "dropout": 0.02793397816284489,
+            "learning_rate": 0.00021878736830823386,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 19.603433352135532,
+            "svr_epsilon": 0.5034769640027811
+        },
+        "value": 8.504750921854312,
+        "state": "COMPLETE",
+        "duration": 53.157774
+    },
+    {
+        "number": 90,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.29517259461943723,
+            "learning_rate": 0.00019765328725073776,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 31.339151232108442,
+            "svr_epsilon": 0.4624945188181344
+        },
+        "value": 8.054991713734786,
+        "state": "COMPLETE",
+        "duration": 90.365296
+    },
+    {
+        "number": 91,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.24548456494738158,
+            "learning_rate": 0.00017931280547355813,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 25.822571954488865,
+            "svr_epsilon": 0.4437326865567623
+        },
+        "value": 8.846131417559526,
+        "state": "COMPLETE",
+        "duration": 90.310979
+    },
+    {
+        "number": 92,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.3166934855049088,
+            "learning_rate": 0.00014998197778554292,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 31.355651637259136,
+            "svr_epsilon": 0.3263503239276067
+        },
+        "value": 7.7679369929068045,
+        "state": "COMPLETE",
+        "duration": 91.57987
+    },
+    {
+        "number": 93,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.31527018375322147,
+            "learning_rate": 0.00015405612574939445,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 19.7357669398762,
+            "svr_epsilon": 0.3899449867395781
+        },
+        "value": 8.041815941155333,
+        "state": "COMPLETE",
+        "duration": 91.257479
+    },
+    {
+        "number": 94,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.33130417574983567,
+            "learning_rate": 0.00014947065641768254,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 0.5557767527125237,
+            "svr_epsilon": 0.3288310360354347
+        },
+        "value": 9.53487392319865,
+        "state": "COMPLETE",
+        "duration": 89.681641
+    },
+    {
+        "number": 95,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 2,
+            "num_layers": 8,
+            "dropout": 0.07851611601972819,
+            "learning_rate": 0.0001620125587887563,
+            "batch_size": 64,
+            "early_stopping_patience": 6,
+            "svr_C": 0.19822750790996793,
+            "svr_epsilon": 0.23539568855486606
+        },
+        "value": 13.250155233732565,
+        "state": "COMPLETE",
+        "duration": 89.417666
+    },
+    {
+        "number": 96,
+        "params": {
+            "model_dim": 64,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.29372346131020394,
+            "learning_rate": 0.00012717031188237785,
+            "batch_size": 64,
+            "early_stopping_patience": 7,
+            "svr_C": 40.608177889425924,
+            "svr_epsilon": 0.3725074849292416
+        },
+        "value": 9.67587553326806,
+        "state": "COMPLETE",
+        "duration": 90.493003
+    },
+    {
+        "number": 97,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.10508713589009265,
+            "learning_rate": 0.0001718890193961224,
+            "batch_size": 64,
+            "early_stopping_patience": 5,
+            "svr_C": 62.91473325608155,
+            "svr_epsilon": 0.29538140111063615
+        },
+        "value": 9.286950114509994,
+        "state": "COMPLETE",
+        "duration": 103.63834
+    },
+    {
+        "number": 98,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 4,
+            "dropout": 0.009930995386079944,
+            "learning_rate": 0.00011853234646241871,
+            "batch_size": 64,
+            "early_stopping_patience": 13,
+            "svr_C": 8.77059940183387,
+            "svr_epsilon": 0.17650247503749691
+        },
+        "value": 8.814082444834204,
+        "state": "COMPLETE",
+        "duration": 61.458465
+    },
+    {
+        "number": 99,
+        "params": {
+            "model_dim": 16,
+            "num_heads": 8,
+            "num_layers": 8,
+            "dropout": 0.046539451569641656,
+            "learning_rate": 0.00013228591743485698,
+            "batch_size": 64,
+            "early_stopping_patience": 7,
+            "svr_C": 24.6748981572876,
+            "svr_epsilon": 0.2623052759502269
+        },
+        "value": 8.301221025688529,
+        "state": "COMPLETE",
+        "duration": 103.319509
+    }
+]
