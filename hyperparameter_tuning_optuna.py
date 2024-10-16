@@ -43,12 +43,10 @@ def main():
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64])
 
             # 2. 选择 num_heads
-            num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16])
-
-            # 检查 num_heads 是否合理
-            if num_heads > model_dim:
-                # num_heads 不应大于 model_dim，否则会导致模型无法正确运行
-                raise TrialPruned()
+            num_heads_options = [h for h in [2, 4, 8, 16] if model_dim % h == 0]
+            if not num_heads_options:
+                raise TrialPruned("No valid num_heads for the selected model_dim.")
+            num_heads = trial.suggest_categorical('num_heads', num_heads_options)
 
             # 其余超参数
             num_layers = trial.suggest_categorical('num_layers', [2, 4, 8, 16])
@@ -71,6 +69,17 @@ def main():
                 svr_degree = 3  # 默认值
                 svr_coef0 = 0.0  # 默认值
 
+            # SVC 超参数
+            svc_C = trial.suggest_float('svc_C', 1e-1, 1e2, log=True)
+            svc_kernel = trial.suggest_categorical('svc_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+            svc_gamma = trial.suggest_categorical('svc_gamma', ['scale', 'auto'])
+            if svc_kernel == 'poly':
+                svc_degree = trial.suggest_int('svc_degree', 2, 5)
+                svc_coef0 = trial.suggest_float('svc_coef0', 0.0, 1.0)
+            else:
+                svc_degree = 3  # 默认值
+                svc_coef0 = 0.0  # 默认值
+
             # 收集当前超参数组合
             current_params = {
                 'model_dim': model_dim,
@@ -86,6 +95,11 @@ def main():
                 'svr_gamma': svr_gamma,
                 'svr_degree': svr_degree,
                 'svr_coef0': svr_coef0,
+                'svc_C': svc_C,
+                'svc_kernel': svc_kernel,
+                'svc_gamma': svc_gamma,
+                'svc_degree': svc_degree,
+                'svc_coef0': svc_coef0,
             }
 
             # 打印当前超参数组合
@@ -137,14 +151,24 @@ def main():
                 'coef0': svr_coef0,
             }
 
-            # 将 SVR 参数添加到 training_params 中
+            # 定义 SVC 参数
+            svc_params_dict = {
+                'C': svc_C,
+                'kernel': svc_kernel,
+                'gamma': svc_gamma,
+                'degree': svc_degree,
+                'coef0': svc_coef0,
+            }
+
+            # 将 SVR 和 SVC 参数添加到 training_params 中
             training_params = current_params.copy()  # 使用当前参数作为训练参数
 
             # 训练模型
-            regression_model, classification_model = train_and_evaluate_models(
+            regression_model, classification_model, accuracy = train_and_evaluate_models(
                 X_train_features, y_train_coords_original, y_train_floor,
                 X_test_features, y_test_coords_original, y_test_floor,
                 svr_params=svr_params_dict,
+                svc_params=svc_params_dict,
                 training_params=training_params  # 传递训练参数
             )
 
@@ -154,14 +178,24 @@ def main():
             mean_error_distance = np.mean(error_distances)
 
             # 报告中间结果并检查是否应该剪枝
-            trial.report(mean_error_distance, step=0)
+            # 这里可以结合回归误差和分类准确率进行综合评估
+            # 例如，我们希望最小化平均误差距离，同时最大化分类准确率
+            # 可以定义一个综合指标，例如：
+            # objective_value = mean_error_distance / accuracy
+
+            # 为了保持方向一致（因为我们希望最小化目标值），我们将准确率取倒数
+            # 当然，您也可以根据实际需求调整指标的计算方式
+
+            objective_value = mean_error_distance / accuracy
+
+            trial.report(objective_value, step=0)
 
             if trial.should_prune():
                 print("试验被剪枝。")
                 raise TrialPruned()
 
             # 返回要最小化的目标值
-            return mean_error_distance
+            return objective_value
 
         except NaNLossError:
             print("试验因 NaN 损失而被剪枝。")
@@ -180,7 +214,7 @@ def main():
     # === 打印和保存最佳结果 ===
     print("最佳参数：")
     print(json.dumps(study.best_params, indent=4, ensure_ascii=False))
-    print(f"最佳平均误差距离（米）：{study.best_value:.2f}")
+    print(f"最佳目标值：{study.best_value:.4f}")
 
     best_params = study.best_params
 
@@ -200,6 +234,12 @@ def main():
     svr_gamma = best_params['svr_gamma']
     svr_degree = best_params.get('svr_degree', 3)  # 如果不是poly核，默认degree为3
     svr_coef0 = best_params.get('svr_coef0', 0.0)  # 如果不是poly核，默认coef0为0.0
+
+    svc_C = best_params['svc_C']
+    svc_kernel = best_params['svc_kernel']
+    svc_gamma = best_params['svc_gamma']
+    svc_degree = best_params.get('svc_degree', 3)  # 如果不是poly核，默认degree为3
+    svc_coef0 = best_params.get('svc_coef0', 0.0)  # 如果不是poly核，默认coef0为0.0
 
     # 初始化并训练最佳模型
     best_model = WiFiTransformerAutoencoder(
@@ -246,14 +286,24 @@ def main():
         'coef0': svr_coef0,
     }
 
+    # 定义最佳 SVC 参数
+    svc_params_best = {
+        'C': svc_C,
+        'kernel': svc_kernel,
+        'gamma': svc_gamma,
+        'degree': svc_degree,
+        'coef0': svc_coef0,
+    }
+
     # 将最佳参数组合成字典
     training_params = best_params.copy()  # 使用最佳参数作为训练参数
 
     # 训练最佳模型
-    best_regression_model, best_classification_model = train_and_evaluate_models(
+    best_regression_model, best_classification_model, accuracy = train_and_evaluate_models(
         X_train_features, y_train_coords_original, y_train_floor,
         X_test_features, y_test_coords_original, y_test_floor,
         svr_params=svr_params_best,
+        svc_params=svc_params_best,
         training_params=training_params  # 传递训练参数
     )
 

@@ -151,7 +151,7 @@ def extract_features(model, X_data, device, batch_size=256):
     return np.vstack(features)
 
 def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X_test_features, y_test_coords, y_test_floor,
-                              svr_params=None, FLOOR_HEIGHT=3.0, training_params=None):
+                              svr_params=None, svc_params=None, FLOOR_HEIGHT=3.0, training_params=None):
     """
     训练并评估回归和分类模型。
 
@@ -163,6 +163,7 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
     - y_test_coords: 测试集坐标（经度、纬度）
     - y_test_floor: 测试集楼层标签
     - svr_params: SVR模型的参数字典（可选）
+    - svc_params: SVC模型的参数字典（可选）
     - FLOOR_HEIGHT: 楼层高度，用于误差计算（默认为3.0米）
     - training_params: 训练参数的字典，用于显示在图表中
 
@@ -188,7 +189,10 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
 
         # 楼层分类模型
         print("训练楼层分类模型...")
-        classification_model = SVC()
+        if svc_params is None:
+            classification_model = SVC()
+        else:
+            classification_model = SVC(**svc_params)
         classification_model.fit(X_train_features, y_train_floor)
         print("楼层分类模型训练完成。")
 
@@ -306,7 +310,7 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
 
         plt.show()
 
-        return regression_model, classification_model
+        return regression_model, classification_model, accuracy
 
     except ValueError as e:
         if 'NaN' in str(e):
