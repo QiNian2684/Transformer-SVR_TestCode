@@ -177,25 +177,10 @@ def main():
             error_distances = compute_error_distances(y_test_coords_original, y_pred_coords)
             mean_error_distance = np.mean(error_distances)
 
-            # 报告中间结果并检查是否应该剪枝
-            # 这里可以结合回归误差和分类准确率进行综合评估
-            # 例如，我们希望最小化平均误差距离，同时最大化分类准确率
-            # 可以定义一个综合指标，例如：
-            # objective_value = mean_error_distance / accuracy
+            # 移除 trial.report() 和 trial.should_prune()，直接返回目标值
 
-            # 为了保持方向一致（因为我们希望最小化目标值），我们将准确率取倒数
-            # 当然，您也可以根据实际需求调整指标的计算方式
-
-            objective_value = mean_error_distance / accuracy
-
-            trial.report(objective_value, step=0)
-
-            if trial.should_prune():
-                print("试验被剪枝。")
-                raise TrialPruned()
-
-            # 返回要最小化的目标值
-            return objective_value
+            # 返回要最小化和最大化的目标值
+            return mean_error_distance, accuracy
 
         except NaNLossError:
             print("试验因 NaN 损失而被剪枝。")
@@ -208,15 +193,23 @@ def main():
                 raise e
 
     # === 创建和运行优化研究 ===
-    study = optuna.create_study(direction='minimize', pruner=optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=10))
+    study = optuna.create_study(
+        directions=['minimize', 'maximize'],
+        pruner=optuna.pruners.NopPruner()  # 在多目标优化中，不使用剪枝
+    )
     study.optimize(objective, n_trials=n_trials, n_jobs=1)
 
     # === 打印和保存最佳结果 ===
     print("最佳参数：")
-    print(json.dumps(study.best_params, indent=4, ensure_ascii=False))
-    print(f"最佳目标值：{study.best_value:.4f}")
+    # 获取帕累托前沿解
+    pareto_front_trials = study.get_pareto_front_trials()
+    # 您可以根据需求选择帕累托前沿中的某个试验，这里以第一个为例
+    best_trial = pareto_front_trials[0]
+    best_params = best_trial.params
 
-    best_params = study.best_params
+    print(json.dumps(best_params, indent=4, ensure_ascii=False))
+    print(f"最佳平均误差距离（米）：{best_trial.values[0]:.2f}")
+    print(f"最佳分类准确率：{best_trial.values[1]:.4f}")
 
     # === 使用最佳超参数重新训练模型 ===
     print("\n使用最佳超参数重新训练模型...")
@@ -331,7 +324,7 @@ def main():
         trial_info = {
             'number': trial.number,
             'params': trial.params,
-            'value': trial.value,
+            'values': trial.values,
             'state': trial.state.name,
             'duration': trial.duration.total_seconds() if trial.duration else None
         }
