@@ -4,8 +4,7 @@ import torch
 import numpy as np
 from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
-from training_and_evaluation import train_autoencoder, extract_features, train_and_evaluate_svr, compute_error_distances
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from training_and_evaluation import train_autoencoder, extract_features, train_and_evaluate_models
 import joblib
 
 def main():
@@ -21,7 +20,7 @@ def main():
         train_path = 'UJIndoorLoc/trainingData1.csv'
         test_path = 'UJIndoorLoc/validationData1.csv'
         print("加载并预处理数据...")
-        X_train, y_train, X_val, y_val, X_test, y_test, scaler_X, scaler_y = load_and_preprocess_data(train_path, test_path)
+        X_train, y_train_coords, y_train_floor, X_val, y_val_coords, y_val_floor, X_test, y_test_coords, y_test_floor, scaler_X, scaler_y, label_encoder = load_and_preprocess_data(train_path, test_path)
 
         # 2. 初始化 Transformer 自编码器模型
         print("初始化 Transformer 自编码器模型...")
@@ -44,65 +43,70 @@ def main():
         X_val_features = extract_features(model, X_val, device=device, batch_size=256)
         X_test_features = extract_features(model, X_test, device=device, batch_size=256)
 
-        # 5. 训练和评估 SVR 模型
-        print("训练和评估 SVR 回归模型...")
-        # 逆标准化目标变量进行训练和评估
-        y_train_original = scaler_y.inverse_transform(y_train)
-        y_val_original = scaler_y.inverse_transform(y_val)
-        y_test_original = scaler_y.inverse_transform(y_test)
+        # 5. 训练和评估模型
+        print("训练和评估模型...")
+        # 逆标准化坐标目标变量
+        y_train_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_train_coords[:, 0].reshape(-1, 1))
+        y_train_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_train_coords[:, 1].reshape(-1, 1))
+        y_train_coords_original = np.hstack((y_train_longitude_original, y_train_latitude_original))
 
-        # 定义 SVR 参数，增加 gamma 和 kernel
+        y_val_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_val_coords[:, 0].reshape(-1, 1))
+        y_val_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_val_coords[:, 1].reshape(-1, 1))
+        y_val_coords_original = np.hstack((y_val_longitude_original, y_val_latitude_original))
+
+        y_test_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_test_coords[:, 0].reshape(-1, 1))
+        y_test_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_test_coords[:, 1].reshape(-1, 1))
+        y_test_coords_original = np.hstack((y_test_longitude_original, y_test_latitude_original))
+
+        # 定义 SVR 参数
         svr_params = {
             'kernel': 'rbf',
-            'C': 1,
+            'C': 1.0,
             'epsilon': 0.1,
             'gamma': 'scale'
         }
 
-        # 训练 MultiOutputRegressor SVR
-        best_svr_model = train_and_evaluate_svr(X_train_features, y_train_original, X_test_features, y_test_original,
-                                               svr_params=svr_params)
+        # 将 SVR 参数添加到训练参数中
+        training_params = {
+            'model_dim': model.encoder_embedding.out_features,
+            'num_heads': model.transformer_encoder.layers[0].self_attn.num_heads,
+            'num_layers': len(model.transformer_encoder.layers),
+            'dropout': model.transformer_encoder.layers[0].dropout.p,
+            'learning_rate': 2e-4,
+            'batch_size': 256,
+            'early_stopping_patience': 5,
+            'svr_kernel': svr_params['kernel'],
+            'svr_C': svr_params['C'],
+            'svr_epsilon': svr_params['epsilon'],
+            'svr_gamma': svr_params['gamma']
+        }
 
-        # 预测并评估
-        y_pred = best_svr_model.predict(X_test_features)
+        # 训练模型
+        regression_model, classification_model = train_and_evaluate_models(
+            X_train_features, y_train_coords_original, y_train_floor,
+            X_test_features, y_test_coords_original, y_test_floor,
+            svr_params=svr_params,
+            training_params=training_params  # 传递训练参数
+        )
 
-        # 轮廓预测：四舍五入楼层
-        y_pred_rounded = y_pred.copy()
-        y_pred_rounded[:, 2] = np.round(y_pred_rounded[:, 2])
-
-        mse = mean_squared_error(y_test_original, y_pred)
-        mae = mean_absolute_error(y_test_original, y_pred)
-        r2 = r2_score(y_test_original, y_pred)
-
-        # 计算误差距离
-        error_distances = compute_error_distances(y_test_original, y_pred)
-        mean_error_distance = np.mean(error_distances)
-        median_error_distance = np.median(error_distances)
-
-        print(f"SVR 回归模型评估结果：")
-        print(f"MSE: {mse:.6f}")
-        print(f"MAE: {mae:.6f}")
-        print(f"R^2 Score: {r2:.6f}")
-        print(f"平均误差距离（米）: {mean_error_distance:.2f}")
-        print(f"中位数误差距离（米）: {median_error_distance:.2f}")
-
-        # 分别评估每个目标变量
-        for i, target in enumerate(['LONGITUDE', 'LATITUDE', 'FLOOR']):
-            mse = mean_squared_error(y_test_original[:, i], y_pred[:, i])
-            mae = mean_absolute_error(y_test_original[:, i], y_pred[:, i])
-            r2 = r2_score(y_test_original[:, i], y_pred[:, i])
-            print(f"{target} - MSE: {mse:.6f}, MAE: {mae:.6f}, R^2 Score: {r2:.6f}")
-
-        # 保存模型和其他结果
+        # 6. 保存模型和其他结果
         torch.save(model.state_dict(), 'best_transformer_autoencoder.pth')
-        joblib.dump(best_svr_model, 'best_svr_model.pkl')
+        joblib.dump(regression_model, 'coordinate_regression_model.pkl')
+        joblib.dump(classification_model, 'floor_classification_model.pkl')
 
-        # 另存最佳模型参数和缩放器
+        # 另存缩放器和标签编码器
         joblib.dump(scaler_X, 'scaler_X.pkl')
         joblib.dump(scaler_y, 'scaler_y.pkl')
+        joblib.dump(label_encoder, 'floor_label_encoder.pkl')
 
         # 保存预测结果（可选）
-        np.savetxt('y_pred_final.csv', y_pred_rounded, delimiter=',', header='LONGITUDE,LATITUDE,FLOOR', comments='')
+        y_pred_coords = regression_model.predict(X_test_features)
+        y_pred_floor = classification_model.predict(X_test_features)
+        y_pred_floor_labels = label_encoder.inverse_transform(y_pred_floor)
+
+        # 合并预测结果
+        y_pred_combined = np.hstack((y_pred_coords, y_pred_floor_labels.reshape(-1, 1)))
+        np.savetxt('y_pred_final.csv', y_pred_combined, delimiter=',', header='LONGITUDE,LATITUDE,FLOOR', comments='')
 
     except Exception as e:
         print(f"程序遇到未处理的异常：{e}")

@@ -7,7 +7,7 @@ from model_definition import WiFiTransformerAutoencoder
 from training_and_evaluation import (
     train_autoencoder,
     extract_features,
-    train_and_evaluate_svr,
+    train_and_evaluate_models,
     compute_error_distances,
     NaNLossError
 )
@@ -32,7 +32,7 @@ def main():
 
     # === 数据加载与预处理 ===
     print("加载并预处理数据...")
-    X_train, y_train, X_val, y_val, X_test, y_test, scaler_X, scaler_y = load_and_preprocess_data(train_path, test_path)
+    X_train, y_train_coords, y_train_floor, X_val, y_val_coords, y_val_floor, X_test, y_test_coords, y_test_floor, scaler_X, scaler_y, label_encoder = load_and_preprocess_data(train_path, test_path)
 
     # === 定义优化目标函数 ===
     def objective(trial):
@@ -41,11 +41,9 @@ def main():
 
             # 1. 选择 model_dim
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64])
-            # model_dim: 模型维度，决定了模型的容量，更大的值意味着更强的学习能力，但也可能导致过拟合。
 
             # 2. 选择 num_heads
             num_heads = trial.suggest_categorical('num_heads', [2, 4, 8, 16])
-            # num_heads: 注意力机制中的头数，更多头数可以捕捉更丰富的信息，但计算量也更大。
 
             # 检查 num_heads 是否合理
             if num_heads > model_dim:
@@ -54,40 +52,21 @@ def main():
 
             # 其余超参数
             num_layers = trial.suggest_categorical('num_layers', [2, 4, 8, 16])
-            # num_layers: 编码器和解码器中层的数量，层数越多，模型能表达的复杂度越高，但也容易过拟合。
-
             dropout = trial.suggest_float('dropout', 0.1, 0.5)
-            # dropout: 防止过拟合的技术，随机丢弃部分神经网络单元。
-
             learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-3, log=True)
-            # learning_rate: 学习率决定了参数更新的步长，过高可能导致训练不稳定，过低可能导致训练速度过慢。
-
             batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
-            # batch_size: 每次训练的样本数量，较大的batch size通常可以提高训练稳定性和效率，但也可能影响模型的泛化能力。
-
             patience = trial.suggest_int('early_stopping_patience', 5, 10)
-            # patience: 早停的容忍度，若训练在指定的轮数内未见改善，则停止训练，有助于防止过拟合。
 
             # SVR 超参数
             svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
-            # svr_kernel: SVR中使用的核函数类型，不同的核函数适用于不同的数据分布。
-
             svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
-            # svr_C: 错误项的惩罚系数。较大的C值可以减少训练误差，但可能增加泛化误差，反之则可能导致训练误差增大。
-
             svr_epsilon = trial.suggest_float('svr_epsilon', 0.0, 1.0)
-            # svr_epsilon: 容忍误差，设置目标函数预测的自由区间，epsilon越大，模型越不敏感。
-
             svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
-            # svr_gamma: 核函数的系数，仅对'rbf', 'poly'和'sigmoid'核有效。'scale'会自动调整，而'auto'使用特征数量的倒数。
 
             # 如果 kernel 是 'poly'，则调优 degree 和 coef0
             if svr_kernel == 'poly':
                 svr_degree = trial.suggest_int('svr_degree', 2, 5)
-                # svr_degree: 'poly'核函数的度数，度数越高，函数能拟合更复杂的曲线，但计算量也更大。
-
                 svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)
-                # svr_coef0: 'poly'和'sigmoid'核的独立项系数，可以调整决策函数的形状。
             else:
                 svr_degree = 3  # 默认值
                 svr_coef0 = 0.0  # 默认值
@@ -139,9 +118,14 @@ def main():
                 print("提取的特征中包含 NaN，试验将被剪枝。")
                 raise TrialPruned()
 
-            # 逆标准化目标变量
-            y_train_original = scaler_y.inverse_transform(y_train)
-            y_test_original = scaler_y.inverse_transform(y_test)
+            # 逆标准化坐标目标变量
+            y_train_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_train_coords[:, 0].reshape(-1, 1))
+            y_train_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_train_coords[:, 1].reshape(-1, 1))
+            y_train_coords_original = np.hstack((y_train_longitude_original, y_train_latitude_original))
+
+            y_test_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_test_coords[:, 0].reshape(-1, 1))
+            y_test_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_test_coords[:, 1].reshape(-1, 1))
+            y_test_coords_original = np.hstack((y_test_longitude_original, y_test_latitude_original))
 
             # 定义 SVR 参数
             svr_params_dict = {
@@ -153,16 +137,20 @@ def main():
                 'coef0': svr_coef0,
             }
 
-            # 训练 SVR 模型
-            svr_model = train_and_evaluate_svr(
-                X_train_features, y_train_original,
-                X_test_features, y_test_original,
-                svr_params=svr_params_dict
+            # 将 SVR 参数添加到 training_params 中
+            training_params = current_params.copy()  # 使用当前参数作为训练参数
+
+            # 训练模型
+            regression_model, classification_model = train_and_evaluate_models(
+                X_train_features, y_train_coords_original, y_train_floor,
+                X_test_features, y_test_coords_original, y_test_floor,
+                svr_params=svr_params_dict,
+                training_params=training_params  # 传递训练参数
             )
 
             # 预测并评估
-            y_pred = svr_model.predict(X_test_features)
-            error_distances = compute_error_distances(y_test_original, y_pred)
+            y_pred_coords = regression_model.predict(X_test_features)
+            error_distances = compute_error_distances(y_test_coords_original, y_pred_coords)
             mean_error_distance = np.mean(error_distances)
 
             # 报告中间结果并检查是否应该剪枝
@@ -239,9 +227,14 @@ def main():
         print("提取的特征中包含 NaN，无法训练最佳模型。")
         exit(1)
 
-    # 逆标准化目标变量
-    y_train_original = scaler_y.inverse_transform(y_train)
-    y_test_original = scaler_y.inverse_transform(y_test)
+    # 逆标准化坐标目标变量
+    y_train_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_train_coords[:, 0].reshape(-1, 1))
+    y_train_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_train_coords[:, 1].reshape(-1, 1))
+    y_train_coords_original = np.hstack((y_train_longitude_original, y_train_latitude_original))
+
+    y_test_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_test_coords[:, 0].reshape(-1, 1))
+    y_test_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_test_coords[:, 1].reshape(-1, 1))
+    y_test_coords_original = np.hstack((y_test_longitude_original, y_test_latitude_original))
 
     # 定义最佳 SVR 参数
     svr_params_best = {
@@ -253,11 +246,15 @@ def main():
         'coef0': svr_coef0,
     }
 
-    # 训练最佳 SVR 模型
-    best_svr_model = train_and_evaluate_svr(
-        X_train_features, y_train_original,
-        X_test_features, y_test_original,
-        svr_params=svr_params_best
+    # 将最佳参数组合成字典
+    training_params = best_params.copy()  # 使用最佳参数作为训练参数
+
+    # 训练最佳模型
+    best_regression_model, best_classification_model = train_and_evaluate_models(
+        X_train_features, y_train_coords_original, y_train_floor,
+        X_test_features, y_test_coords_original, y_test_floor,
+        svr_params=svr_params_best,
+        training_params=training_params  # 传递训练参数
     )
 
     # === 保存模型和参数 ===
@@ -265,9 +262,13 @@ def main():
     torch.save(best_model.state_dict(), 'best_transformer_autoencoder_optuna.pth')
     print("Transformer 自编码器模型已保存到 best_transformer_autoencoder_optuna.pth")
 
-    # 保存最佳 SVR 模型
-    joblib.dump(best_svr_model, 'best_svr_model_optuna.pkl')
-    print("SVR 模型已保存到 best_svr_model_optuna.pkl")
+    # 保存最佳回归模型
+    joblib.dump(best_regression_model, 'best_coordinate_regression_model_optuna.pkl')
+    print("坐标回归模型已保存到 best_coordinate_regression_model_optuna.pkl")
+
+    # 保存最佳分类模型
+    joblib.dump(best_classification_model, 'best_floor_classification_model_optuna.pkl')
+    print("楼层分类模型已保存到 best_floor_classification_model_optuna.pkl")
 
     # 保存最佳参数
     with open('best_hyperparameters_optuna.json', 'w', encoding='utf-8') as f:

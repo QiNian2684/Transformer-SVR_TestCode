@@ -3,9 +3,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.svm import SVR
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, accuracy_score, classification_report
+from sklearn.svm import SVR, SVC
 from sklearn.multioutput import MultiOutputRegressor
 import joblib
 import matplotlib.pyplot as plt
@@ -19,21 +18,17 @@ class NaNLossError(Exception):
 
 def compute_error_distances(y_true, y_pred):
     """
-    计算真实位置和预测位置之间的欧氏距离（以米为单位），包括楼层差异。
+    计算真实位置和预测位置之间的欧氏距离（以米为单位），不包括楼层差异。
 
     参数：
-    - y_true: 真实位置的数组，形状为 [n_samples, 3]，列分别为 [X_coordinate, Y_coordinate, FLOOR]
-    - y_pred: 预测位置的数组，形状为 [n_samples, 3]
+    - y_true: 真实位置的数组，形状为 [n_samples, 2]，列分别为 [X_coordinate, Y_coordinate]
+    - y_pred: 预测位置的数组，形状为 [n_samples, 2]
 
     返回：
     - distances: 距离数组，形状为 [n_samples,]，单位为米
     """
     # 计算水平距离（X 和 Y 坐标）
-    horizontal_distances = np.linalg.norm(y_true[:, :2] - y_pred[:, :2], axis=1)
-    # 计算垂直距离（楼层差异 * 每层高度）
-    vertical_distances = np.abs(y_true[:, 2] - y_pred[:, 2]) * FLOOR_HEIGHT
-    # 计算总欧氏距离
-    distances = np.sqrt(horizontal_distances**2 + vertical_distances**2)
+    distances = np.linalg.norm(y_true - y_pred, axis=1)
     return distances
 
 def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, learning_rate=2e-4, early_stopping_patience=5):
@@ -155,121 +150,169 @@ def extract_features(model, X_data, device, batch_size=256):
             features.append(encoded.cpu().numpy())
     return np.vstack(features)
 
-def train_and_evaluate_svr(X_train_features, y_train, X_test_features, y_test, svr_params=None, FLOOR_HEIGHT=3.0):
+def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X_test_features, y_test_coords, y_test_floor,
+                              svr_params=None, FLOOR_HEIGHT=3.0, training_params=None):
     """
-    训练并评估 SVR 模型。
+    训练并评估回归和分类模型。
 
     参数：
     - X_train_features: 训练集特征
-    - y_train: 训练集目标变量
+    - y_train_coords: 训练集坐标（经度、纬度）
+    - y_train_floor: 训练集楼层标签
     - X_test_features: 测试集特征
-    - y_test: 测试集目标变量
+    - y_test_coords: 测试集坐标（经度、纬度）
+    - y_test_floor: 测试集楼层标签
     - svr_params: SVR模型的参数字典（可选）
     - FLOOR_HEIGHT: 楼层高度，用于误差计算（默认为3.0米）
+    - training_params: 训练参数的字典，用于显示在图表中
 
     返回：
-    - best_svr: 训练好的 SVR 模型
+    - regression_model: 训练好的坐标回归模型
+    - classification_model: 训练好的楼层分类模型
     """
     try:
+        # 坐标回归模型
         if svr_params is None:
-            print("使用 RandomizedSearchCV 调优 SVR 模型参数...")
-            param_dist = {
-                'estimator__kernel': ['rbf', 'linear'],
-                'estimator__C': [0.1, 1, 10, 100, 1000],
-                'estimator__epsilon': [0.05, 0.1, 0.2, 0.5, 1.0],
-                'estimator__gamma': ['scale', 'auto']
+            print("使用默认的 SVR 参数进行回归...")
+            svr_params = {
+                'kernel': 'rbf',
+                'C': 1.0,
+                'epsilon': 0.1,
+                'gamma': 'scale'
             }
-            svr = SVR()
-            multi_svr = MultiOutputRegressor(svr)
-            random_search = RandomizedSearchCV(
-                multi_svr, param_distributions=param_dist, n_iter=20, cv=3,
-                verbose=2, random_state=42, n_jobs=-1
-            )
-            random_search.fit(X_train_features, y_train)
 
-            print(f"最佳参数: {random_search.best_params_}")
-            best_svr = random_search.best_estimator_
-        else:
-            print("使用提供的 SVR 参数训练模型...")
-            svr = SVR(**svr_params)
-            best_svr = MultiOutputRegressor(svr)
-            best_svr.fit(X_train_features, y_train)
-            print("模型训练完成。")
+        svr = SVR(**svr_params)
+        regression_model = MultiOutputRegressor(svr)
+        regression_model.fit(X_train_features, y_train_coords)
+        print("坐标回归模型训练完成。")
 
+        # 楼层分类模型
+        print("训练楼层分类模型...")
+        classification_model = SVC()
+        classification_model.fit(X_train_features, y_train_floor)
+        print("楼层分类模型训练完成。")
+
+        # 预测测试数据
         print("开始预测测试数据...")
-        y_pred = best_svr.predict(X_test_features)
+        y_pred_coords = regression_model.predict(X_test_features)
+        y_pred_floor = classification_model.predict(X_test_features)
         print("预测完成。")
 
-        print("计算模型性能指标...")
-        mse = mean_squared_error(y_test, y_pred)
-        mae = mean_absolute_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-        print("性能指标计算完成。")
+        # 评估回归模型
+        print("评估回归模型...")
+        mse = mean_squared_error(y_test_coords, y_pred_coords)
+        mae = mean_absolute_error(y_test_coords, y_pred_coords)
+        r2 = r2_score(y_test_coords, y_pred_coords)
+        print("回归模型评估完成。")
+
+        # 评估分类模型
+        print("评估分类模型...")
+        accuracy = accuracy_score(y_test_floor, y_pred_floor)
+        class_report = classification_report(y_test_floor, y_pred_floor, zero_division=0)
+        print("分类模型评估完成。")
+
+        # 检查未被预测到的类别
+        actual_classes = set(y_test_floor)
+        predicted_classes = set(y_pred_floor)
+        missing_classes = actual_classes - predicted_classes
+        if missing_classes:
+            print(f"警告：以下类别未被预测到：{missing_classes}")
 
         # 计算误差距离
-        error_distances = compute_error_distances(y_test, y_pred)
+        error_distances = compute_error_distances(y_test_coords, y_pred_coords)
         mean_error_distance = np.mean(error_distances)
         median_error_distance = np.median(error_distances)
 
-        print(f"SVR 回归模型评估结果：")
+        print(f"回归模型评估结果：")
         print(f"MSE: {mse:.6f}")
         print(f"MAE: {mae:.6f}")
         print(f"R^2 Score: {r2:.6f}")
-        print(f"平均误差距离（米）: {mean_error_distance:.2f}")  # 现在是三维误差
-        print(f"中位数误差距离（米）: {median_error_distance:.2f}")  # 现在是三维误差
+        print(f"平均误差距离（米）: {mean_error_distance:.2f}")
+        print(f"中位数误差距离（米）: {median_error_distance:.2f}")
 
-        # 保存 SVR 模型
+        print(f"分类模型评估结果：")
+        print(f"准确率: {accuracy:.4f}")
+        print("分类报告：")
+        print(class_report)
+
+        # 保存模型
         print("保存模型...")
-        joblib.dump(best_svr, 'best_svr_model.pkl')
+        joblib.dump(regression_model, 'coordinate_regression_model.pkl')
+        joblib.dump(classification_model, 'floor_classification_model.pkl')
         print("模型已保存。")
 
-        # 生成3D预测误差散点图并添加评价指标
-        error_x = y_pred[:, 0] - y_test[:, 0]
-        error_y = y_pred[:, 1] - y_test[:, 1]
-        error_floor = y_pred[:, 2] - y_test[:, 2]
-        error_z = error_floor * FLOOR_HEIGHT  # 使用统一的层高变量
+        # 生成2D预测误差散点图并添加评价指标和训练参数
+        fig = plt.figure(figsize=(14, 10), constrained_layout=True)
+        gs = fig.add_gridspec(2, 2, width_ratios=[2, 1])
 
-        # 创建图形和网格
-        fig = plt.figure(figsize=(12, 10))
-        gs = fig.add_gridspec(2, 1, height_ratios=[4, 1], hspace=0.4)
-
-        # 第一个子图：3D散点图
-        ax1 = fig.add_subplot(gs[0], projection='3d')
-        error_distance = np.sqrt(error_x ** 2 + error_y ** 2 + error_z ** 2)
-        scatter = ax1.scatter(error_x, error_y, error_z, c=error_distance, cmap='viridis', alpha=0.6)
-        cbar = fig.colorbar(scatter, ax=ax1, pad=0.1)
+        # 第一个子图：2D散点图
+        ax1 = fig.add_subplot(gs[:, 0])
+        error_x = y_pred_coords[:, 0] - y_test_coords[:, 0]
+        error_y = y_pred_coords[:, 1] - y_test_coords[:, 1]
+        error_distance = np.sqrt(error_x ** 2 + error_y ** 2)
+        scatter = ax1.scatter(error_x, error_y, c=error_distance, cmap='viridis', alpha=0.6)
+        cbar = fig.colorbar(scatter, ax=ax1)
         cbar.set_label('Error distance (meters)')
 
-        ax1.set_title('3D Prediction Errors')
-        ax1.set_xlabel('Error in X coordinate (meters)')
-        ax1.set_ylabel('Error in Y coordinate (meters)')
-        ax1.set_zlabel('Error in Z coordinate (meters)')
+        ax1.set_title('2D Prediction Errors')
+        ax1.set_xlabel('Error in Longitude (meters)')
+        ax1.set_ylabel('Error in Latitude (meters)')
 
-        # 第二个子图：评价指标文本
-        ax2 = fig.add_subplot(gs[1])
+        # 第二个子图：训练参数和评估指标
+        ax2 = fig.add_subplot(gs[0, 1])
         ax2.axis('off')  # 隐藏坐标轴
 
-        # 格式化评价指标文本
+        # 格式化训练参数为多列文本
+        params_text = "Training Parameters:\n"
+        if training_params is not None:
+            params_items = list(training_params.items())
+            params_lines = []
+            for i in range(0, len(params_items), 2):
+                line = ''
+                for j in range(2):
+                    if i + j < len(params_items):
+                        key, value = params_items[i + j]
+                        line += f"{key}: {value}    "
+                params_lines.append(line.strip())
+            params_text += '\n'.join(params_lines)
+
+        # 格式化评估指标为多列文本
         metrics_text = (
-            f"SVR Regression Model Evaluation Results:\n"
-            f"MSE: {mse:.6f}\n"
-            f"MAE: {mae:.6f}\n"
+            f"Regression Model Evaluation Results:\n"
+            f"MSE: {mse:.6f}    MAE: {mae:.6f}\n"
             f"R² Score: {r2:.6f}\n"
-            f"Average Error Distance (meters): {mean_error_distance:.2f}\n"
-            f"Median Error Distance (meters): {median_error_distance:.2f}"
+            f"Avg Error Dist (m): {mean_error_distance:.2f}    Median Error Dist (m): {median_error_distance:.2f}\n\n"
+            f"Classification Model Evaluation Results:\n"
+            f"Accuracy: {accuracy:.4f}\n"
         )
 
-        # 在子图中添加文本
-        ax2.text(0.5, 0.5, metrics_text, fontsize=12, ha='center', va='center',
-                 bbox=dict(facecolor='white', alpha=0.5))
+        if missing_classes:
+            metrics_text += f"Missing Classes: {missing_classes}\n"
+
+        # 将训练参数和评估指标合并
+        combined_text = params_text + "\n\n" + metrics_text
+
+        # 设置字体大小并添加文本
+        ax2.text(0.5, 0.5, combined_text, fontsize=10, ha='center', va='center', wrap=True)
+
+        # 第三个子图：分类报告
+        ax3 = fig.add_subplot(gs[1, 1])
+        ax3.axis('off')  # 隐藏坐标轴
+
+        # 将分类报告格式化为多列文本
+        class_report_lines = class_report.strip().split('\n')
+        class_report_text = '\n'.join(class_report_lines)
+        ax3.text(0.5, 0.5, f"Classification Report:\n{class_report_text}", fontsize=10, ha='center', va='center', wrap=True)
 
         plt.show()
 
-        return best_svr
+        return regression_model, classification_model
 
     except ValueError as e:
         if 'NaN' in str(e):
-            print("SVR 训练过程中遇到 NaN，试验将被剪枝。")
-            raise ValueError("SVR 训练失败，输入数据中包含 NaN。")
+            print("训练过程中遇到 NaN，试验将被剪枝。")
+            raise ValueError("训练失败，输入数据中包含 NaN。")
         else:
             raise e
+
+# 您需要在这里添加模型的定义、数据加载和预处理的代码，以及调用上述函数来完成整个训练和评估流程。

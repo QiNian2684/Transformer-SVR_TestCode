@@ -27,8 +27,6 @@ class WiFiTransformerAutoencoder(nn.Module):
         self.decoder_fc = nn.Linear(model_dim, input_dim)
         self.activation = nn.ReLU()  # 保持 ReLU 激活函数
 
-        # 移除自定义初始化，使用 PyTorch 默认初始化
-
     def encode(self, x):
         """
         编码器部分，提取特征。
