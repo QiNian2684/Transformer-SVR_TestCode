@@ -47,6 +47,8 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
 
     返回：
     - model: 训练后的模型
+    - train_loss_list: 每个 epoch 的训练损失列表
+    - val_loss_list: 每个 epoch 的验证损失列表
     """
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
@@ -68,6 +70,10 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
     best_val_loss = float('inf')
     patience_counter = 0
     best_model_state_dict = None  # 用于保存最佳模型参数
+
+    # 初始化列表以记录每个 epoch 的损失
+    train_loss_list = []
+    val_loss_list = []
 
     for epoch in range(epochs):
         model.train()
@@ -100,7 +106,11 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
         avg_val_loss = np.mean(val_losses)
         print(f"Epoch [{epoch+1}/{epochs}], Train Loss: {avg_train_loss:.6f}, Val Loss: {avg_val_loss:.6f}")
 
-        # 检查是否存在 NaN
+        # 将损失添加到列表中
+        train_loss_list.append(avg_train_loss)
+        val_loss_list.append(avg_val_loss)
+
+        # 检查数据中是否存在 NaN
         if np.isnan(avg_train_loss) or np.isnan(avg_val_loss):
             print("发现 NaN 损失，停止训练。")
             raise NaNLossError("训练过程中出现 NaN 损失。")
@@ -123,7 +133,7 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
     else:
         print("未找到最佳模型参数，使用最终的模型参数。")
 
-    return model
+    return model, train_loss_list, val_loss_list
 
 def extract_features(model, X_data, device, batch_size=256):
     """
@@ -151,7 +161,8 @@ def extract_features(model, X_data, device, batch_size=256):
     return np.vstack(features)
 
 def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X_test_features, y_test_coords, y_test_floor,
-                              svr_params=None, svc_params=None, FLOOR_HEIGHT=3.0, training_params=None):
+                              svr_params=None, svc_params=None, FLOOR_HEIGHT=3.0, training_params=None,
+                              train_loss_list=None, val_loss_list=None):
     """
     训练并评估回归和分类模型。
 
@@ -166,10 +177,13 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
     - svc_params: SVC模型的参数字典（可选）
     - FLOOR_HEIGHT: 楼层高度，用于误差计算（默认为3.0米）
     - training_params: 训练参数的字典，用于显示在图表中
+    - train_loss_list: 每个 epoch 的训练损失列表（可选）
+    - val_loss_list: 每个 epoch 的验证损失列表（可选）
 
     返回：
     - regression_model: 训练好的坐标回归模型
     - classification_model: 训练好的楼层分类模型
+    - accuracy: 分类模型的准确率
     """
     try:
         # 坐标回归模型
@@ -246,11 +260,11 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
         print("模型已保存。")
 
         # 生成2D预测误差散点图并添加评价指标和训练参数
-        fig = plt.figure(figsize=(14, 10), constrained_layout=True)
-        gs = fig.add_gridspec(2, 2, width_ratios=[2, 1])
+        fig = plt.figure(figsize=(14, 14), constrained_layout=True)
+        gs = fig.add_gridspec(3, 2, width_ratios=[2, 1], height_ratios=[1, 1, 1])
 
         # 第一个子图：2D散点图
-        ax1 = fig.add_subplot(gs[:, 0])
+        ax1 = fig.add_subplot(gs[0:2, 0])
         error_x = y_pred_coords[:, 0] - y_test_coords[:, 0]
         error_y = y_pred_coords[:, 1] - y_test_coords[:, 1]
         error_distance = np.sqrt(error_x ** 2 + error_y ** 2)
@@ -308,6 +322,20 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
         class_report_text = '\n'.join(class_report_lines)
         ax3.text(0.5, 0.5, f"Classification Report:\n{class_report_text}", fontsize=10, ha='center', va='center', wrap=True)
 
+        # 第四个子图：训练和验证损失曲线
+        ax4 = fig.add_subplot(gs[2, :])  # 最后一行，跨越所有列
+        if train_loss_list is not None and val_loss_list is not None:
+            epochs_range = range(1, len(train_loss_list) + 1)
+            ax4.plot(epochs_range, train_loss_list, 'r-', label='Train Loss')
+            ax4.plot(epochs_range, val_loss_list, 'b-', label='Validation Loss')
+            ax4.set_xlabel('Epoch')
+            ax4.set_ylabel('Loss')
+            ax4.set_title('Training and Validation Loss')
+            ax4.legend()
+        else:
+            ax4.text(0.5, 0.5, 'No loss data available', fontsize=12, ha='center', va='center')
+            ax4.axis('off')
+
         plt.show()
 
         return regression_model, classification_model, accuracy
@@ -318,5 +346,3 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
             raise ValueError("训练失败，输入数据中包含 NaN。")
         else:
             raise e
-
-# 您需要在这里添加模型的定义、数据加载和预处理的代码，以及调用上述函数来完成整个训练和评估流程。

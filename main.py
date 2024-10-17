@@ -14,21 +14,21 @@ def main():
     try:
         # 检查是否有可用的 GPU，如果有则使用 GPU 训练模型，否则使用 CPU，输出详细的用于计算的设备信息
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"使用设备: {device}")
+        print(f"Using device: {device}")
 
         # 1. 数据加载与预处理
         train_path = 'UJIndoorLoc/trainingData1.csv'
         test_path = 'UJIndoorLoc/validationData1.csv'
-        print("加载并预处理数据...")
+        print("Loading and preprocessing data...")
         X_train, y_train_coords, y_train_floor, X_val, y_val_coords, y_val_floor, X_test, y_test_coords, y_test_floor, scaler_X, scaler_y, label_encoder = load_and_preprocess_data(train_path, test_path)
 
         # 2. 初始化 Transformer 自编码器模型
-        print("初始化 Transformer 自编码器模型...")
+        print("Initializing Transformer Autoencoder model...")
         model = WiFiTransformerAutoencoder().to(device)
 
         # 3. 训练 Transformer 自编码器模型
-        print("训练 Transformer 自编码器模型...")
-        model = train_autoencoder(
+        print("Training Transformer Autoencoder model...")
+        model, train_loss_list, val_loss_list = train_autoencoder(
             model, X_train, X_val,
             device=device,
             epochs=50,
@@ -38,13 +38,13 @@ def main():
         )
 
         # 4. 提取特征
-        print("提取训练集和测试集特征...")
+        print("Extracting features from training and testing sets...")
         X_train_features = extract_features(model, X_train, device=device, batch_size=256)
         X_val_features = extract_features(model, X_val, device=device, batch_size=256)
         X_test_features = extract_features(model, X_test, device=device, batch_size=256)
 
         # 5. 训练和评估模型
-        print("训练和评估模型...")
+        print("Training and evaluating models...")
         # 逆标准化坐标目标变量
         y_train_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_train_coords[:, 0].reshape(-1, 1))
         y_train_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_train_coords[:, 1].reshape(-1, 1))
@@ -82,11 +82,13 @@ def main():
         }
 
         # 训练模型
-        regression_model, classification_model = train_and_evaluate_models(
+        regression_model, classification_model, accuracy = train_and_evaluate_models(
             X_train_features, y_train_coords_original, y_train_floor,
             X_test_features, y_test_coords_original, y_test_floor,
             svr_params=svr_params,
-            training_params=training_params  # 传递训练参数
+            training_params=training_params,  # 传递训练参数
+            train_loss_list=train_loss_list,    # 传递训练损失列表
+            val_loss_list=val_loss_list         # 传递验证损失列表
         )
 
         # 6. 保存模型和其他结果
@@ -109,7 +111,7 @@ def main():
         np.savetxt('y_pred_final.csv', y_pred_combined, delimiter=',', header='LONGITUDE,LATITUDE,FLOOR', comments='')
 
     except Exception as e:
-        print(f"程序遇到未处理的异常：{e}")
+        print(f"An unhandled exception occurred: {e}")
 
 if __name__ == '__main__':
     main()
