@@ -40,35 +40,63 @@ def main():
             # Transformer 自编码器超参数
 
             # 1. 选择 model_dim
+            # 'model_dim' 是模型维度，它定义了嵌入向量的大小以及Transformer中所有线性层的输出尺寸。
+            # 较大的 'model_dim' 可以增加模型的容量，允许模型捕捉更复杂的特征，但会增加计算量和内存消耗，可能导致训练更慢。
+            # 较小的 'model_dim' 可以减少计算量和内存消耗，但可能限制模型学习复杂特征的能力。
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64])
 
             # 2. 选择 num_heads
+            # 'num_heads' 指的是多头注意力机制中头的数量。每个头会独立学习输入数据的不同方面的信息。
+            # 增加 'num_heads' 可以提高模型的表示能力，允许模型在不同的表示子空间中捕获信息，但同时会显著增加计算负担。
+            # 减少 'num_heads' 可以减轻计算负担，但可能使得模型捕捉特征的能力下降。
+            # 注意：'num_heads' 必须能整除 'model_dim'。
             num_heads_options = [h for h in [2, 4, 8, 16] if model_dim % h == 0]
             if not num_heads_options:
                 raise TrialPruned("No valid num_heads for the selected model_dim.")
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
 
             # 3. 选择 num_layers
+            # 'num_layers' 表示Transformer网络的层数。每一层都包括一个多头注意力和一个前向传播网络。
+            # 增加 'num_layers' 可以提高模型的深度，理论上可以让模型学习更复杂的特征和更深层次的抽象，但也增加了过拟合的风险和训练难度。
+            # 减少 'num_layers' 可以使模型更快地训练，但可能限制模型处理复杂数据的能力。
             num_layers = trial.suggest_categorical('num_layers', [2, 4, 8, 16])
 
             # 4. 设置 dropout
+            # 'dropout' 是一种正则化技术，用于防止神经网络过拟合。它随机地关闭一部分神经元，使得网络不过分依赖于任何一条路径，增加泛化能力。
+            # 较高的 'dropout' 值增加了正则化强度，有助于减少过拟合，但过高可能导致欠拟合。
+            # 较低的 'dropout' 值减少了正则化强度，可以使网络在训练集上表现更好，但可能增加过拟合风险。
             dropout = trial.suggest_float('dropout', 0.1, 0.5)
 
             # 5. 设定学习率
-            learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-3, log=True)
+            # 'learning_rate' 控制模型在每次迭代中更新的步长。合适的学习率可以使模型快速收敛，而不合适的学习率可能导致模型训练不稳定。
+            # 较高的学习率可以加快训练进程，但过高可能导致训练过程中出现震荡或不收敛。
+            # 较低的学习率确保了训练稳定性，但可能使训练过程变得非常缓慢，特别是在接近最优解时。
+            learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-2, log=True)
 
             # 6. 选择批量大小
+            # 'batch_size' 影响模型的训练速度和内存使用量。大批量可以提高内存利用率和训练速度，但可能影响模型最终的泛化能力。
+            # 较大的 'batch_size' 可以实现更稳定的梯度下降，但需要更多的内存，并可能导致模型泛化性能下降。
+            # 较小的 'batch_size' 可以提高模型的泛化能力，但可能使训练更加不稳定和耗时。
             batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
 
             # 7. 设置早停耐心值
+            # 'patience' 是早停策略中的一个参数，如果在设定的连续几个训练周期内，验证集上的性能没有改善，则提前终止训练。
+            # 较大的 'patience' 值允许模型在停止前有更多的时间来找到更好的解，但可能导致训练时间过长。
+            # 较小的 'patience' 值可以减少训练时间，但可能导致模型未能充分训练。
             patience = trial.suggest_int('early_stopping_patience', 5, 10)
 
             # 8. SVR 超参数
+            # 'svr_kernel' 表示SVR（支持向量回归）的核函数类型，不同的核函数可以适应不同的数据分布。
+            # 'svr_C' 是正则化参数，控制错误项的惩罚力度。较大的C值可以减少训练误差，但可能导致过拟合。
+            # 'svr_epsilon' 定义了不惩罚预测误差在该值范围内的模型，较大的epsilon可以减少模型的敏感度，提高模型的鲁棒性。
+            # 'svr_gamma' 决定了核函数的形状，影响模型的复杂度和训练效果。
             svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
             svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
             svr_epsilon = trial.suggest_float('svr_epsilon', 0.0, 1.0)
             svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
 
+            # 如果 kernel 是 'poly'，则调优 degree 和 coef0
+            # 'svr_degree' 和 'svr_coef0' 分别是多项式核的度数和系数，影响核函数的形状和模型的非线性。
             if svr_kernel == 'poly':
                 svr_degree = trial.suggest_int('svr_degree', 2, 5)
                 svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)
@@ -77,6 +105,9 @@ def main():
                 svr_coef0 = 0.0  # 默认值
 
             # 9. SVC 超参数
+            # 'svc_C' 是SVC（支持向量分类）的正则化参数。较大的C值可以优化分类准确率，但可能引起过拟合。
+            # 'svc_kernel' 和 'svc_gamma' 的解释同SVR。
+            # 'svc_degree' 和 'svc_coef0' 仅在选择多项式核时有意义，用于定义核函数的非线性程度和形状。
             svc_C = trial.suggest_float('svc_C', 1e-1, 1e2, log=True)
             svc_kernel = trial.suggest_categorical('svc_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
             svc_gamma = trial.suggest_categorical('svc_gamma', ['scale', 'auto'])
