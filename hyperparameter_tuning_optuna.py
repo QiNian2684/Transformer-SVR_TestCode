@@ -27,7 +27,7 @@ def main():
     test_path = 'UJIndoorLoc/validationData_building0.csv'
 
     # 固定训练参数
-    epochs = 150  # 训练轮数
+    epochs = 50  # 训练轮数
     n_trials = 500  # Optuna 试验次数，根据计算资源调整
 
     # === 数据加载与预处理 ===
