@@ -7,7 +7,7 @@ from model_definition import WiFiTransformerAutoencoder
 from training_and_evaluation import (
     train_autoencoder,
     extract_features,
-    compute_error_distances,
+    train_and_evaluate_regression_model,
     NaNLossError
 )
 import optuna
@@ -38,7 +38,7 @@ def main():
 
     # 固定训练参数
     epochs = 150  # 训练轮数
-    n_trials = 100  # Optuna 试验次数，根据计算资源调整
+    n_trials = 500  # Optuna 试验次数，根据计算资源调整
 
     # === 数据加载与预处理 ===
     print("加载并预处理数据...")
@@ -60,7 +60,7 @@ def main():
             patience = trial.suggest_int('early_stopping_patience', 5, 10)
 
             # SVR 超参数
-            svr_kernel = trial.suggest_categorical('svr_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+            svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
             svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
             svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 1.0)
             svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
@@ -100,7 +100,7 @@ def main():
             ).to(device)
 
             # 训练自编码器
-            model, _, _ = train_autoencoder(
+            model, train_loss_list, val_loss_list = train_autoencoder(
                 model, X_train, X_val,
                 device=device,
                 epochs=epochs,
@@ -128,9 +128,6 @@ def main():
             y_test_coords_original = np.hstack((y_test_longitude_original, y_test_latitude_original))
 
             # 定义 SVR 参数
-            from sklearn.svm import SVR
-            from sklearn.multioutput import MultiOutputRegressor
-
             svr_params = {
                 'kernel': svr_kernel,
                 'C': svr_C,
@@ -140,15 +137,15 @@ def main():
                 'coef0': svr_coef0,
             }
 
-            # 训练 SVR 模型
-            svr = SVR(**svr_params)
-            regression_model = MultiOutputRegressor(svr)
-            regression_model.fit(X_train_features, y_train_coords_original)
-
-            # 预测并评估
-            y_pred_coords = regression_model.predict(X_test_features)
-            error_distances = compute_error_distances(y_test_coords_original, y_pred_coords)
-            mean_error_distance = np.mean(error_distances)
+            # 训练并评估回归模型，包含可视化和打印输出
+            regression_model, mean_error_distance = train_and_evaluate_regression_model(
+                X_train_features, y_train_coords_original,
+                X_test_features, y_test_coords_original,
+                svr_params=svr_params,
+                training_params=current_params,
+                train_loss_list=train_loss_list,
+                val_loss_list=val_loss_list
+            )
 
             # 返回平均误差距离作为优化目标
             return mean_error_distance

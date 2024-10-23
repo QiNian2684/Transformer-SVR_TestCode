@@ -9,6 +9,9 @@ from sklearn.multioutput import MultiOutputRegressor
 import joblib
 import matplotlib.pyplot as plt
 
+# 设置可视化字体为 Times New Roman
+plt.rcParams['font.family'] = 'Times New Roman'
+
 # 定义每层的高度（单位：米）
 FLOOR_HEIGHT = 3  # 您可以根据需要调整此值
 
@@ -104,7 +107,7 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
 
         avg_train_loss = np.mean(train_losses)
         avg_val_loss = np.mean(val_losses)
-        print(f"Epoch [{epoch+1}/{epochs}], Train Loss: {avg_train_loss:.6f}, Val Loss: {avg_val_loss:.6f}")
+        print(f"Epoch [{epoch+1}/{epochs}], 训练损失: {avg_train_loss:.6f}, 验证损失: {avg_val_loss:.6f}")
 
         # 将损失添加到列表中
         train_loss_list.append(avg_train_loss)
@@ -160,30 +163,25 @@ def extract_features(model, X_data, device, batch_size=256):
             features.append(encoded.cpu().numpy())
     return np.vstack(features)
 
-def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X_test_features, y_test_coords, y_test_floor,
-                              svr_params=None, svc_params=None, FLOOR_HEIGHT=3.0, training_params=None,
-                              train_loss_list=None, val_loss_list=None):
+def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test_features, y_test_coords,
+                                        svr_params=None, training_params=None,
+                                        train_loss_list=None, val_loss_list=None):
     """
-    训练并评估回归和分类模型。
+    训练并评估回归模型，包括可视化和打印输出。
 
     参数：
     - X_train_features: 训练集特征
     - y_train_coords: 训练集坐标（经度、纬度）
-    - y_train_floor: 训练集楼层标签
     - X_test_features: 测试集特征
     - y_test_coords: 测试集坐标（经度、纬度）
-    - y_test_floor: 测试集楼层标签
     - svr_params: SVR模型的参数字典（可选）
-    - svc_params: SVC模型的参数字典（可选）
-    - FLOOR_HEIGHT: 楼层高度，用于误差计算（默认为3.0米）
     - training_params: 训练参数的字典，用于显示在图表中
     - train_loss_list: 每个 epoch 的训练损失列表（可选）
     - val_loss_list: 每个 epoch 的验证损失列表（可选）
 
     返回：
-    - regression_model: 训练好的坐标回归模型
-    - classification_model: 训练好的楼层分类模型
-    - accuracy: 分类模型的准确率
+    - regression_model: 训练好的回归模型
+    - mean_error_distance: 平均误差距离（用于超参数优化）
     """
     try:
         # 坐标回归模型
@@ -201,19 +199,9 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
         regression_model.fit(X_train_features, y_train_coords)
         print("坐标回归模型训练完成。")
 
-        # 楼层分类模型
-        print("训练楼层分类模型...")
-        if svc_params is None:
-            classification_model = SVC()
-        else:
-            classification_model = SVC(**svc_params)
-        classification_model.fit(X_train_features, y_train_floor)
-        print("楼层分类模型训练完成。")
-
         # 预测测试数据
         print("开始预测测试数据...")
         y_pred_coords = regression_model.predict(X_test_features)
-        y_pred_floor = classification_model.predict(X_test_features)
         print("预测完成。")
 
         # 评估回归模型
@@ -222,19 +210,6 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
         mae = mean_absolute_error(y_test_coords, y_pred_coords)
         r2 = r2_score(y_test_coords, y_pred_coords)
         print("回归模型评估完成。")
-
-        # 评估分类模型
-        print("评估分类模型...")
-        accuracy = accuracy_score(y_test_floor, y_pred_floor)
-        class_report = classification_report(y_test_floor, y_pred_floor, zero_division=0)
-        print("分类模型评估完成。")
-
-        # 检查未被预测到的类别
-        actual_classes = set(y_test_floor)
-        predicted_classes = set(y_pred_floor)
-        missing_classes = actual_classes - predicted_classes
-        if missing_classes:
-            print(f"警告：以下类别未被预测到：{missing_classes}")
 
         # 计算误差距离
         error_distances = compute_error_distances(y_test_coords, y_pred_coords)
@@ -248,35 +223,29 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
         print(f"平均误差距离（米）: {mean_error_distance:.2f}")
         print(f"中位数误差距离（米）: {median_error_distance:.2f}")
 
-        print(f"分类模型评估结果：")
-        print(f"准确率: {accuracy:.4f}")
-        print("分类报告：")
-        print(class_report)
-
         # 保存模型
-        print("保存模型...")
+        print("保存回归模型...")
         joblib.dump(regression_model, 'coordinate_regression_model.pkl')
-        joblib.dump(classification_model, 'floor_classification_model.pkl')
-        print("模型已保存。")
+        print("回归模型已保存。")
 
-        # 生成2D预测误差散点图并添加评价指标和训练参数
-        fig = plt.figure(figsize=(14, 14), constrained_layout=True)
-        gs = fig.add_gridspec(3, 2, width_ratios=[2, 1], height_ratios=[1, 1, 1])
+        # 生成可视化图表
+        fig = plt.figure(figsize=(14, 10), constrained_layout=True)
+        gs = fig.add_gridspec(2, 2)
 
-        # 第一个子图：2D散点图
-        ax1 = fig.add_subplot(gs[0:2, 0])
+        # 第一行第一列：2D预测误差散点图
+        ax1 = fig.add_subplot(gs[0, 0])
         error_x = y_pred_coords[:, 0] - y_test_coords[:, 0]
         error_y = y_pred_coords[:, 1] - y_test_coords[:, 1]
         error_distance = np.sqrt(error_x ** 2 + error_y ** 2)
         scatter = ax1.scatter(error_x, error_y, c=error_distance, cmap='viridis', alpha=0.6)
         cbar = fig.colorbar(scatter, ax=ax1)
-        cbar.set_label('Error distance (meters)')
+        cbar.set_label('Error Distance (meters)')
 
         ax1.set_title('2D Prediction Errors')
-        ax1.set_xlabel('Error in Longitude (meters)')
-        ax1.set_ylabel('Error in Latitude (meters)')
+        ax1.set_xlabel('Longitude Error (meters)')
+        ax1.set_ylabel('Latitude Error (meters)')
 
-        # 第二个子图：训练参数和评估指标
+        # 第一行第二列：训练参数和评估指标
         ax2 = fig.add_subplot(gs[0, 1])
         ax2.axis('off')  # 隐藏坐标轴
 
@@ -299,7 +268,132 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
             f"Regression Model Evaluation Results:\n"
             f"MSE: {mse:.6f}    MAE: {mae:.6f}\n"
             f"R² Score: {r2:.6f}\n"
-            f"Avg Error Dist (m): {mean_error_distance:.2f}    Median Error Dist (m): {median_error_distance:.2f}\n\n"
+            f"Mean Error Dist (m): {mean_error_distance:.2f}    Median Error Dist (m): {median_error_distance:.2f}\n"
+        )
+
+        # 将训练参数和评估指标合并
+        combined_text = params_text + "\n\n" + metrics_text
+
+        # 设置字体大小并添加文本
+        ax2.text(0.5, 0.5, combined_text, fontsize=16, ha='center', va='center', wrap=True)
+
+        # 第二行：训练和验证损失曲线
+        ax3 = fig.add_subplot(gs[1, :])
+        if train_loss_list is not None and val_loss_list is not None:
+            epochs_range = range(1, len(train_loss_list) + 1)
+            ax3.plot(epochs_range, train_loss_list, 'r-', label='Training Loss')
+            ax3.plot(epochs_range, val_loss_list, 'b-', label='Validation Loss')
+            ax3.set_xlabel('Epoch')
+            ax3.set_ylabel('Loss')
+            ax3.set_title('Training and Validation Loss')
+            ax3.legend()
+        else:
+            ax3.text(0.5, 0.5, 'No loss data available', fontsize=12, ha='center', va='center')
+            ax3.axis('off')
+
+        plt.show()
+
+        return regression_model, mean_error_distance
+
+    except ValueError as e:
+        if 'NaN' in str(e):
+            print("训练过程中遇到 NaN，试验将被剪枝。")
+            raise ValueError("训练失败，输入数据中包含 NaN。")
+        else:
+            raise e
+
+def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_test_features, y_test_floor,
+                                            svc_params=None, training_params=None,
+                                            train_loss_list=None, val_loss_list=None, label_encoder=None):
+    """
+    训练并评估分类模型，包括可视化和打印输出。
+
+    参数：
+    - X_train_features: 训练集特征
+    - y_train_floor: 训练集楼层标签
+    - X_test_features: 测试集特征
+    - y_test_floor: 测试集楼层标签
+    - svc_params: SVC模型的参数字典（可选）
+    - training_params: 训练参数的字典，用于显示在图表中
+    - train_loss_list: 每个 epoch 的训练损失列表（可选）
+    - val_loss_list: 每个 epoch 的验证损失列表（可选）
+    - label_encoder: 标签编码器，用于解码楼层标签
+
+    返回：
+    - classification_model: 训练好的分类模型
+    - accuracy: 分类准确率（用于超参数优化）
+    """
+    try:
+        # 楼层分类模型
+        print("训练楼层分类模型...")
+        if svc_params is None:
+            classification_model = SVC()
+        else:
+            classification_model = SVC(**svc_params)
+        classification_model.fit(X_train_features, y_train_floor)
+        print("楼层分类模型训练完成。")
+
+        # 预测测试数据
+        print("开始预测测试数据...")
+        y_pred_floor = classification_model.predict(X_test_features)
+        print("预测完成。")
+
+        # 评估分类模型
+        print("评估分类模型...")
+        accuracy = accuracy_score(y_test_floor, y_pred_floor)
+        class_report = classification_report(y_test_floor, y_pred_floor, zero_division=0)
+        print("分类模型评估完成。")
+
+        # 检查未被预测到的类别
+        actual_classes = set(y_test_floor)
+        predicted_classes = set(y_pred_floor)
+        missing_classes = actual_classes - predicted_classes
+        if missing_classes:
+            print(f"警告：以下类别未被预测到：{missing_classes}")
+
+        print(f"分类模型评估结果：")
+        print(f"准确率: {accuracy:.4f}")
+        print("分类报告：")
+        print(class_report)
+
+        # 保存模型
+        print("保存分类模型...")
+        joblib.dump(classification_model, 'floor_classification_model.pkl')
+        print("分类模型已保存。")
+
+        # 生成可视化图表
+        fig = plt.figure(figsize=(14, 10), constrained_layout=True)
+        gs = fig.add_gridspec(2, 2)
+
+        # 第一行第一列：分类报告
+        ax1 = fig.add_subplot(gs[0, 0])
+        ax1.axis('off')  # 隐藏坐标轴
+
+        # 将分类报告格式化为多列文本
+        class_report_lines = class_report.strip().split('\n')
+        class_report_text = '\n'.join(class_report_lines)
+        ax1.text(0.5, 0.5, f"Classification Report:\n{class_report_text}", fontsize=10, ha='center', va='center', wrap=True)
+
+        # 第一行第二列：训练参数和评估指标
+        ax2 = fig.add_subplot(gs[0, 1])
+        ax2.axis('off')  # 隐藏坐标轴
+
+        # 格式化训练参数为多列文本
+        params_text = "Training Parameters:\n"
+        if training_params is not None:
+            params_items = list(training_params.items())
+            params_lines = []
+            for i in range(0, len(params_items), 2):
+                line = ''
+                for j in range(2):
+                    if i + j < len(params_items):
+                        key, value = params_items[i + j]
+                        line += f"{key}: {value}    "
+                params_lines.append(line.strip())
+            params_text += '\n'.join(params_lines)
+
+        # 格式化评估指标为文本
+        metrics_text = (
             f"Classification Model Evaluation Results:\n"
             f"Accuracy: {accuracy:.4f}\n"
         )
@@ -311,34 +405,25 @@ def train_and_evaluate_models(X_train_features, y_train_coords, y_train_floor, X
         combined_text = params_text + "\n\n" + metrics_text
 
         # 设置字体大小并添加文本
-        ax2.text(0.5, 0.5, combined_text, fontsize=10, ha='center', va='center', wrap=True)
+        ax2.text(0.5, 0.5, combined_text, fontsize=16, ha='center', va='center', wrap=True)
 
-        # 第三个子图：分类报告
-        ax3 = fig.add_subplot(gs[1, 1])
-        ax3.axis('off')  # 隐藏坐标轴
-
-        # 将分类报告格式化为多列文本
-        class_report_lines = class_report.strip().split('\n')
-        class_report_text = '\n'.join(class_report_lines)
-        ax3.text(0.5, 0.5, f"Classification Report:\n{class_report_text}", fontsize=10, ha='center', va='center', wrap=True)
-
-        # 第四个子图：训练和验证损失曲线
-        ax4 = fig.add_subplot(gs[2, :])  # 最后一行，跨越所有列
+        # 第二行：训练和验证损失曲线
+        ax3 = fig.add_subplot(gs[1, :])
         if train_loss_list is not None and val_loss_list is not None:
             epochs_range = range(1, len(train_loss_list) + 1)
-            ax4.plot(epochs_range, train_loss_list, 'r-', label='Train Loss')
-            ax4.plot(epochs_range, val_loss_list, 'b-', label='Validation Loss')
-            ax4.set_xlabel('Epoch')
-            ax4.set_ylabel('Loss')
-            ax4.set_title('Training and Validation Loss')
-            ax4.legend()
+            ax3.plot(epochs_range, train_loss_list, 'r-', label='Training Loss')
+            ax3.plot(epochs_range, val_loss_list, 'b-', label='Validation Loss')
+            ax3.set_xlabel('Epoch')
+            ax3.set_ylabel('Loss')
+            ax3.set_title('Training and Validation Loss')
+            ax3.legend()
         else:
-            ax4.text(0.5, 0.5, 'No loss data available', fontsize=12, ha='center', va='center')
-            ax4.axis('off')
+            ax3.text(0.5, 0.5, 'No loss data available', fontsize=12, ha='center', va='center')
+            ax3.axis('off')
 
         plt.show()
 
-        return regression_model, classification_model, accuracy
+        return classification_model, accuracy
 
     except ValueError as e:
         if 'NaN' in str(e):

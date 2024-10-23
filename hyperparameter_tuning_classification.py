@@ -7,6 +7,7 @@ from model_definition import WiFiTransformerAutoencoder
 from training_and_evaluation import (
     train_autoencoder,
     extract_features,
+    train_and_evaluate_classification_model,
     NaNLossError
 )
 import optuna
@@ -37,7 +38,7 @@ def main():
 
     # 固定训练参数
     epochs = 150  # 训练轮数
-    n_trials = 100  # Optuna 试验次数，根据计算资源调整
+    n_trials = 500  # Optuna 试验次数，根据计算资源调整
 
     # === 数据加载与预处理 ===
     print("加载并预处理数据...")
@@ -60,7 +61,7 @@ def main():
 
             # SVC 超参数
             svc_C = trial.suggest_float('svc_C', 1e-1, 1e2, log=True)
-            svc_kernel = trial.suggest_categorical('svc_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+            svc_kernel = trial.suggest_categorical('svc_kernel', ['poly', 'rbf', 'sigmoid'])
             svc_gamma = trial.suggest_categorical('svc_gamma', ['scale', 'auto'])
             if svc_kernel == 'poly':
                 svc_degree = trial.suggest_int('svc_degree', 2, 5)
@@ -97,7 +98,7 @@ def main():
             ).to(device)
 
             # 训练自编码器
-            model, _, _ = train_autoencoder(
+            model, train_loss_list, val_loss_list = train_autoencoder(
                 model, X_train, X_val,
                 device=device,
                 epochs=epochs,
@@ -116,8 +117,6 @@ def main():
                 raise TrialPruned()
 
             # 定义 SVC 参数
-            from sklearn.svm import SVC
-
             svc_params = {
                 'C': svc_C,
                 'kernel': svc_kernel,
@@ -126,14 +125,16 @@ def main():
                 'coef0': svc_coef0,
             }
 
-            # 训练 SVC 模型
-            classification_model = SVC(**svc_params)
-            classification_model.fit(X_train_features, y_train_floor)
-
-            # 预测并评估
-            y_pred_floor = classification_model.predict(X_test_features)
-            from sklearn.metrics import accuracy_score
-            accuracy = accuracy_score(y_test_floor, y_pred_floor)
+            # 训练并评估分类模型，包含可视化和打印输出
+            classification_model, accuracy = train_and_evaluate_classification_model(
+                X_train_features, y_train_floor,
+                X_test_features, y_test_floor,
+                svc_params=svc_params,
+                training_params=current_params,
+                train_loss_list=train_loss_list,
+                val_loss_list=val_loss_list,
+                label_encoder=label_encoder
+            )
 
             # 返回准确率作为优化目标
             return accuracy
