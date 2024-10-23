@@ -288,7 +288,7 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
             ax3.set_title('Training and Validation Loss')
             ax3.legend()
         else:
-            ax3.text(0.5, 0.5, 'No loss data available', fontsize=12, ha='center', va='center')
+            ax3.text(0.5, 0.5, 'No loss data available', fontsize=16, ha='center', va='center')
             ax3.axis('off')
 
         plt.show()
@@ -372,7 +372,7 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
         # 将分类报告格式化为多列文本
         class_report_lines = class_report.strip().split('\n')
         class_report_text = '\n'.join(class_report_lines)
-        ax1.text(0.5, 0.5, f"Classification Report:\n{class_report_text}", fontsize=10, ha='center', va='center', wrap=True)
+        ax1.text(0.5, 0.5, f"Classification Report:\n{class_report_text}", fontsize=16, ha='center', va='center', wrap=True)
 
         # 第一行第二列：训练参数和评估指标
         ax2 = fig.add_subplot(gs[0, 1])
@@ -418,7 +418,7 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
             ax3.set_title('Training and Validation Loss')
             ax3.legend()
         else:
-            ax3.text(0.5, 0.5, 'No loss data available', fontsize=12, ha='center', va='center')
+            ax3.text(0.5, 0.5, 'No loss data available', fontsize=16, ha='center', va='center')
             ax3.axis('off')
 
         plt.show()

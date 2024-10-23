@@ -64,7 +64,7 @@ def main():
 
             # num_layers: 模型的层数，从1到32层，步长为8。
             # 层数增加可以增强模型的表达能力，但也会增加模型的复杂度和训练难度。
-            num_layers = trial.suggest_int('num_layers', 4, 8, 16, 32, 64)
+            num_layers = trial.suggest_int('num_layers', low=4, high=64, log=True)
 
             # dropout: 在模型训练时随机丢弃节点的比例，范围从0.1到0.5。
             # Dropout 可以防止模型过拟合，较高的值意味着更强的正则化效果。

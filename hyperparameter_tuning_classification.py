@@ -61,7 +61,7 @@ def main():
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
 
             # num_layers: 模型中的层数，层数越多，模型的能力越强，但也可能导致过拟合。
-            num_layers = trial.suggest_int('num_layers', 4, 8, 16, 32, 64)
+            num_layers = trial.suggest_int('num_layers', low=4, high=64, log=True)
 
             # dropout: 用于正则化的丢弃率，范围从0.1到0.5。较高的值可以减少过拟合，但也可能导致学习不足。
             dropout = trial.suggest_float('dropout', 0.1, 0.5)
