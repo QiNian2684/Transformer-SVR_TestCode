@@ -132,3 +132,21 @@ dmypy.json
 *.pth
 
 
+# 图片格式
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+
+# 视频格式
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# 其他媒体文件
+*.mp3
+*.wav
+*.flac
+*.m4a
