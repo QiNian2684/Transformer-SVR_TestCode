@@ -37,7 +37,7 @@ def main():
     test_path = 'UJIndoorLoc/validationData.csv'
 
     # 固定训练参数
-    epochs = 150  # 训练轮数
+    epochs = 200  # 训练轮数
     n_trials = 500  # Optuna 试验次数，根据计算资源调整
 
     # === 数据加载与预处理 ===
@@ -76,7 +76,7 @@ def main():
 
             # batch_size: 训练批次的大小，可选值为64, 128, 256。
             # 较大的批次可以提高内存利用率和训练速度，但可能影响模型最终的泛化能力。
-            batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
+            batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512])
 
             # patience: 早停机制的耐心值，即在一定数量的训练轮次内如果模型性能没有提升则停止训练。
             # 范围从5到10，这个参数用来防止过拟合并缩短无效训练时间。
