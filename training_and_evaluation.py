@@ -1,5 +1,6 @@
 # training_and_evaluation.py
 
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -165,7 +166,8 @@ def extract_features(model, X_data, device, batch_size=256):
 
 def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test_features, y_test_coords,
                                         svr_params=None, training_params=None,
-                                        train_loss_list=None, val_loss_list=None):
+                                        train_loss_list=None, val_loss_list=None,
+                                        output_dir=None, image_index=1):
     """
     训练并评估回归模型，包括可视化和打印输出。
 
@@ -178,6 +180,8 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
     - training_params: 训练参数的字典，用于显示在图表中
     - train_loss_list: 每个 epoch 的训练损失列表（可选）
     - val_loss_list: 每个 epoch 的验证损失列表（可选）
+    - output_dir: 保存结果图片的目录（可选）
+    - image_index: 图片编号，默认从1开始
 
     返回：
     - regression_model: 训练好的回归模型
@@ -275,7 +279,7 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
         combined_text = params_text + "\n\n" + metrics_text
 
         # 设置字体大小并添加文本
-        ax2.text(0.5, 0.5, combined_text, fontsize=16, ha='center', va='center', wrap=True)
+        ax2.text(0.5, 0.5, combined_text, fontsize=12, ha='center', va='center', wrap=True)
 
         # 第二行：训练和验证损失曲线
         ax3 = fig.add_subplot(gs[1, :])
@@ -291,7 +295,15 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
             ax3.text(0.5, 0.5, 'No loss data available', fontsize=16, ha='center', va='center')
             ax3.axis('off')
 
-        plt.show()
+        # 保存图片
+        if output_dir is not None:
+            # 修改这里，确保图片编号为四位数
+            image_path = os.path.join(output_dir, f"{image_index:04d}.png")
+            plt.savefig(image_path)
+            plt.close(fig)
+            print(f"结果图片已保存到 {image_path}")
+        else:
+            plt.show()
 
         return regression_model, mean_error_distance
 
@@ -304,7 +316,8 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
 
 def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_test_features, y_test_floor,
                                             svc_params=None, training_params=None,
-                                            train_loss_list=None, val_loss_list=None, label_encoder=None):
+                                            train_loss_list=None, val_loss_list=None, label_encoder=None,
+                                            output_dir=None, image_index=1):
     """
     训练并评估分类模型，包括可视化和打印输出。
 
@@ -318,6 +331,8 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
     - train_loss_list: 每个 epoch 的训练损失列表（可选）
     - val_loss_list: 每个 epoch 的验证损失列表（可选）
     - label_encoder: 标签编码器，用于解码楼层标签
+    - output_dir: 保存结果图片的目录（可选）
+    - image_index: 图片编号，默认从1开始
 
     返回：
     - classification_model: 训练好的分类模型
@@ -372,7 +387,7 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
         # 将分类报告格式化为多列文本
         class_report_lines = class_report.strip().split('\n')
         class_report_text = '\n'.join(class_report_lines)
-        ax1.text(0.5, 0.5, f"Classification Report:\n{class_report_text}", fontsize=16, ha='center', va='center', wrap=True)
+        ax1.text(0.5, 0.5, f"Classification Report:\n{class_report_text}", fontsize=12, ha='center', va='center', wrap=True)
 
         # 第一行第二列：训练参数和评估指标
         ax2 = fig.add_subplot(gs[0, 1])
@@ -405,7 +420,7 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
         combined_text = params_text + "\n\n" + metrics_text
 
         # 设置字体大小并添加文本
-        ax2.text(0.5, 0.5, combined_text, fontsize=16, ha='center', va='center', wrap=True)
+        ax2.text(0.5, 0.5, combined_text, fontsize=12, ha='center', va='center', wrap=True)
 
         # 第二行：训练和验证损失曲线
         ax3 = fig.add_subplot(gs[1, :])
@@ -421,7 +436,15 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
             ax3.text(0.5, 0.5, 'No loss data available', fontsize=16, ha='center', va='center')
             ax3.axis('off')
 
-        plt.show()
+        # 保存图片
+        if output_dir is not None:
+            # 修改这里，确保图片编号为四位数
+            image_path = os.path.join(output_dir, f"{image_index:04d}.png")
+            plt.savefig(image_path)
+            plt.close(fig)
+            print(f"结果图片已保存到 {image_path}")
+        else:
+            plt.show()
 
         return classification_model, accuracy
 
