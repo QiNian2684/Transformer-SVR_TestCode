@@ -33,8 +33,8 @@ def main():
     print(f"使用设备: {device}")
 
     # 数据路径
-    train_path = 'UJIndoorLoc/trainingData_building0.csv'
-    test_path = 'UJIndoorLoc/validationData_building0.csv'
+    train_path = 'UJIndoorLoc/trainingData.csv'
+    test_path = 'UJIndoorLoc/validationData.csv'
 
     # 固定训练参数
     epochs = 150  # 训练轮数
@@ -53,11 +53,11 @@ def main():
             if not num_heads_options:
                 raise TrialPruned("model_dim 不可被任何 num_heads 整除。")
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
-            num_layers = trial.suggest_int('num_layers', 1, 4)
+            num_layers = trial.suggest_int('num_layers', 1, 4, 8, 16)
             dropout = trial.suggest_float('dropout', 0.1, 0.5)
-            learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-3, log=True)
+            learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
             batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
-            patience = trial.suggest_int('early_stopping_patience', 5, 10)
+            patience = trial.suggest_int('early_stopping_patience', 3, 15)
 
             # SVC 超参数
             svc_C = trial.suggest_float('svc_C', 1e-1, 1e2, log=True)
