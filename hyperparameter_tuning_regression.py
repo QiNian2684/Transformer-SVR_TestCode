@@ -48,26 +48,69 @@ def main():
     def objective(trial):
         try:
             # Transformer 自编码器超参数
+
+            # model_dim: 模型的维度，影响模型的大小和复杂性，可选值包括16, 32, 64, 128。
+            # 选用较大的维度通常能提高模型的学习能力，但也会增加计算负担和过拟合的风险。
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
+
+            # num_heads_options: 根据 model_dim 的可整除性确定的注意力头数选项。
+            # 注意力机制的头数影响模型对不同信息的并行处理能力，但必须能被 model_dim 整除。
             num_heads_options = [h for h in [2, 4, 8, 16] if model_dim % h == 0]
             if not num_heads_options:
                 raise TrialPruned("model_dim 不可被任何 num_heads 整除。")
+
+            # num_heads: 选择的注意力头数，从 num_heads_options 中选取，与模型并行处理信息的能力直接相关。
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
-            num_layers = trial.suggest_int('num_layers', 1, 4, 8, 16)
+
+            # num_layers: 模型的层数，从1到32层，步长为8。
+            # 层数增加可以增强模型的表达能力，但也会增加模型的复杂度和训练难度。
+            num_layers = trial.suggest_int('num_layers', 4, 8, 16, 32, 64)
+
+            # dropout: 在模型训练时随机丢弃节点的比例，范围从0.1到0.5。
+            # Dropout 可以防止模型过拟合，较高的值意味着更强的正则化效果。
             dropout = trial.suggest_float('dropout', 0.1, 0.5)
+
+            # learning_rate: 模型学习率，采用对数刻度从1e-6到1e-2选择。
+            # 学习率决定了模型参数更新的速度，较小的学习率可能导致学习缓慢，而较大的学习率可能导致训练不稳定。
             learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-2, log=True)
+
+            # batch_size: 训练批次的大小，可选值为64, 128, 256。
+            # 较大的批次可以提高内存利用率和训练速度，但可能影响模型最终的泛化能力。
             batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
+
+            # patience: 早停机制的耐心值，即在一定数量的训练轮次内如果模型性能没有提升则停止训练。
+            # 范围从5到10，这个参数用来防止过拟合并缩短无效训练时间。
             patience = trial.suggest_int('early_stopping_patience', 5, 10)
 
             # SVR 超参数
-            svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
+
+            # svr_kernel: 支持向量机的核函数类型，选择 'linear', 'poly', 'rbf', 'sigmoid' 中的一个。
+            # 核函数类型决定了数据在更高维空间中的映射方式，影响模型的复杂度和训练效果。
+            svr_kernel = trial.suggest_categorical('svr_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+
+            # svr_C: 正则化参数C，控制误差项和决策面边界的权衡，从0.1到100的对数刻度选择。
+            # 较大的C值意味着赋予误差项更小的权重，通常会得到更紧的决策边界，但可能导致过拟合。
             svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
+
+            # svr_epsilon: Epsilon in the SVR model, controls the width of the tube within which no penalty is associated in the training loss.
+            # 值的范围从0.01到1.0，控制SVR模型中无惩罚区域的宽度，影响模型的灵敏度和泛化能力。
             svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 1.0)
+
+            # svr_gamma: 核函数的系数，'scale' 和 'auto' 两种选择。
+            # 这个参数决定了数据特征在高维空间的分布，与核函数的性能和模型的复杂度密切相关。
             svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
+
+            # 如果使用多项式核函数，则还需要设置以下参数：
             if svr_kernel == 'poly':
+                # svr_degree: 多项式核函数的度数，从2到5选择。
+                # 度数越高，模型能表达的复杂度越高，但计算成本也越大。
                 svr_degree = trial.suggest_int('svr_degree', 2, 5)
+
+                # svr_coef0: 多项式核函数的自由系数，从0.0到1.0选择。
+                # 这个参数影响核函数的形状，进而影响模型的决策边界。
                 svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)
             else:
+                # 默认值
                 svr_degree = 3  # 默认值
                 svr_coef0 = 0.0  # 默认值
 

@@ -48,23 +48,48 @@ def main():
     def objective(trial):
         try:
             # Transformer 自编码器超参数
+
+            # model_dim: 模型的维度，用于控制模型的大小和复杂度。可选值包括16, 32, 64, 128，值越大，模型越能捕捉复杂特征，但计算成本也越高。
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
+
+            # num_heads_options: 基于model_dim确定的可用的注意力头数。注意力头必须能被model_dim整除。这里的选择依赖于model_dim的因子。
             num_heads_options = [h for h in [2, 4, 8, 16] if model_dim % h == 0]
             if not num_heads_options:
                 raise TrialPruned("model_dim 不可被任何 num_heads 整除。")
+
+            # num_heads: 注意力机制中的头数，多头注意力能帮助模型从不同的表示子空间学习信息。
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
-            num_layers = trial.suggest_int('num_layers', 1, 4, 8, 16)
+
+            # num_layers: 模型中的层数，层数越多，模型的能力越强，但也可能导致过拟合。
+            num_layers = trial.suggest_int('num_layers', 4, 8, 16, 32, 64)
+
+            # dropout: 用于正则化的丢弃率，范围从0.1到0.5。较高的值可以减少过拟合，但也可能导致学习不足。
             dropout = trial.suggest_float('dropout', 0.1, 0.5)
+
+            # learning_rate: 学习率，采用对数标度进行选择，从1e-5到1e-2。学习率对模型训练的稳定性和速度有重要影响。
             learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
+
+            # batch_size: 批大小，决定每次梯度更新考虑的数据量。可选值包括64, 128, 256，较大的批量可以提高训练稳定性。
             batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
+
+            # patience: 早停策略中的耐心参数，用于控制模型在验证集上多少个周期没有改进时停止训练，从3到15。
             patience = trial.suggest_int('early_stopping_patience', 3, 15)
 
             # SVC 超参数
+
+            # svc_C: SVC的正则化参数C，控制误分类的惩罚，使用对数标度选择从0.1到100的值。C值越大，模型对误分类的惩罚越大，可能会导致过拟合。
             svc_C = trial.suggest_float('svc_C', 1e-1, 1e2, log=True)
-            svc_kernel = trial.suggest_categorical('svc_kernel', ['poly', 'rbf', 'sigmoid'])
+
+            # svc_kernel: SVC的核函数类型，可选'linear', 'poly', 'rbf', 'sigmoid'，决定数据如何被映射到高维空间来进行分类。
+            svc_kernel = trial.suggest_categorical('svc_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+
+            # svc_gamma: 核函数的系数，可选'scale'或'auto'，影响数据映射到高维空间的方式。
             svc_gamma = trial.suggest_categorical('svc_gamma', ['scale', 'auto'])
+
+            # svc_degree: 当使用多项式核函数时，此参数控制多项式的度数，从2到5。度数越高，函数形态越复杂。
             if svc_kernel == 'poly':
                 svc_degree = trial.suggest_int('svc_degree', 2, 5)
+                # svc_coef0: 当使用多项式核函数时，此参数为自由项系数，控制高阶项的影响。
                 svc_coef0 = trial.suggest_float('svc_coef0', 0.0, 1.0)
             else:
                 svc_degree = 3  # 默认值
