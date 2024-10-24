@@ -264,8 +264,8 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
                     if i + j < len(params_items):
                         key, value = params_items[i + j]
                         line += f"{key}: {value}    "
-                    params_lines.append(line.strip())
-                params_text += '\n'.join(params_lines)
+                params_lines.append(line.strip())
+            params_text += '\n'.join(params_lines)
 
         # 格式化评估指标为多列文本
         metrics_text = (
@@ -401,8 +401,8 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
                     if i + j < len(params_items):
                         key, value = params_items[i + j]
                         line += f"{key}: {value}    "
-                    params_lines.append(line.strip())
-                params_text += '\n'.join(params_lines)
+                params_lines.append(line.strip())
+            params_text += '\n'.join(params_lines)
 
         # 格式化评估指标为文本
         metrics_text = (

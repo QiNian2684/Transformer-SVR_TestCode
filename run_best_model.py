@@ -31,8 +31,8 @@ def main():
     主程序，读取最佳超参数配置，运行分类和回归模型，并保存结果图片。
     """
     #设置epoch
-    classification_epoch = 5
-    regression_epoch = 5
+    classification_epoch = 75
+    regression_epoch = 75
 
     # 设置随机种子
     set_seed()

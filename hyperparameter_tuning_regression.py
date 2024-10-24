@@ -29,8 +29,8 @@ def set_seed(seed=42):
 def main():
 
     # 固定训练参数
-    epochs = 5  # 训练轮数
-    n_trials = 3  # Optuna 试验次数，根据计算资源调整
+    epochs = 75  # 训练轮数
+    n_trials = 450  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
     set_seed()
@@ -41,8 +41,8 @@ def main():
     print(f"使用设备: {device}")
 
     # 数据路径
-    train_path = 'UJIndoorLoc/trainingData_building0.csv'
-    test_path = 'UJIndoorLoc/validationData_building0.csv'
+    train_path = 'UJIndoorLoc/trainingData.csv'
+    test_path = 'UJIndoorLoc/validationData.csv'
 
     # === 创建结果保存目录 ===
     results_dir = 'results'
