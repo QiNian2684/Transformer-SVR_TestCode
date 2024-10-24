@@ -34,8 +34,8 @@ def plot_3d_scatter(csv_file):
         cbar.set_label('Floor')
 
         # 设置轴标签
-        ax.set_xlabel('Longitude (单位)')
-        ax.set_ylabel('Latitude (单位)')
+        ax.set_xlabel('Longitude')
+        ax.set_ylabel('Latitude')
         ax.set_zlabel('Floor')
 
         # 设置标题

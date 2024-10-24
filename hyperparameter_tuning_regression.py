@@ -17,6 +17,7 @@ import joblib
 import json
 import random
 from datetime import datetime
+import shutil  # 新增，用于复制文件
 
 def set_seed(seed=42):
     random.seed(seed)
@@ -234,6 +235,19 @@ def main():
     with open(best_params_path, 'w', encoding='utf-8') as f:
         json.dump(best_trial.params, f, indent=4, ensure_ascii=False)
     print(f"最佳超参数已保存到 {best_params_path}。")
+
+    # === 保存最佳试验的结果图片为“0000.png” ===
+    try:
+        best_trial_number = best_trial.number
+        best_image_index = best_trial_number + 1  # 与保存图片时的编号对应
+        best_image_name = f"{best_image_index:04d}.png"
+        best_image_path = os.path.join(current_run_dir, best_image_name)
+        destination_image_path = os.path.join(current_run_dir, "0000.png")
+        # 复制最佳试验的图片并重命名为“0000.png”
+        shutil.copyfile(best_image_path, destination_image_path)
+        print(f"最佳试验的结果图片已保存为 {destination_image_path}")
+    except Exception as e:
+        print(f"无法保存最佳试验的图片：{e}")
 
 if __name__ == '__main__':
     main()
