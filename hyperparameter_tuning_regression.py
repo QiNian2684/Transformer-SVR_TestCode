@@ -41,8 +41,8 @@ def main():
     print(f"使用设备: {device}")
 
     # 数据路径
-    train_path = 'UJIndoorLoc/trainingData.csv'
-    test_path = 'UJIndoorLoc/validationData.csv'
+    train_path = 'UJIndoorLoc/trainingData_building0.csv'
+    test_path = 'UJIndoorLoc/validationData_building0.csv'
 
     # === 创建结果保存目录 ===
     results_dir = 'results'
@@ -53,7 +53,7 @@ def main():
     print(f"结果将保存到: {current_run_dir}")
 
     # === 定义模型保存目录 ===
-    model_dir = 'saved_models'
+    model_dir = 'best_models_pkl'
     os.makedirs(model_dir, exist_ok=True)  # 创建目录，如果已存在则不操作
 
     # === 数据加载与预处理 ===
@@ -63,9 +63,15 @@ def main():
     # 初始化图片编号
     image_index = 1
 
+    # 用于保存最佳模型
+    best_mean_error_distance = float('inf')
+    best_regression_model = None
+
     # === 定义优化目标函数 ===
     def objective(trial):
         nonlocal image_index  # 引入外部变量
+        nonlocal best_mean_error_distance
+        nonlocal best_regression_model
 
         try:
             # Transformer 自编码器超参数
@@ -170,10 +176,14 @@ def main():
                 image_index=trial.number + 1  # 使用 trial.number + 1 作为图片编号
             )
 
-            # 保存模型到指定目录
-            model_path = os.path.join(model_dir, f'regression_model_trial_{trial.number}.pkl')
-            joblib.dump(regression_model, model_path)
-            print(f"回归模型已保存到 {model_path}。")
+            # 如果当前模型表现更好，保存模型
+            if mean_error_distance < best_mean_error_distance:
+                best_mean_error_distance = mean_error_distance
+                best_regression_model = regression_model
+                # 保存最佳模型
+                best_model_path = os.path.join(model_dir, 'best_regression_model.pkl')
+                joblib.dump(best_regression_model, best_model_path)
+                print(f"最佳回归模型已保存到 {best_model_path}。")
 
             # 返回平均误差距离作为优化目标
             return mean_error_distance
@@ -216,14 +226,7 @@ def main():
     except Exception as e:
         print(f"无法保存最佳试验的图片：{e}")
 
-    # === 将最佳模型另存为指定文件名 ===
-    best_model_path = os.path.join(model_dir, 'best_regression_model.pkl')
-    trial_model_path = os.path.join(model_dir, f'regression_model_trial_{best_trial.number}.pkl')
-    if os.path.exists(trial_model_path):
-        shutil.copyfile(trial_model_path, best_model_path)
-        print(f"最佳回归模型已保存为 {best_model_path}")
-    else:
-        print("未找到最佳回归模型，无法复制。")
+    # 不再需要复制最佳模型，因为已经在 objective 中保存了最佳模型
 
 if __name__ == '__main__':
     main()

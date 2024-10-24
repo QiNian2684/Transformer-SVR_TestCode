@@ -17,8 +17,7 @@ plt.rcParams['font.family'] = 'Times New Roman'
 FLOOR_HEIGHT = 3  # 您可以根据需要调整此值
 
 # 定义模型保存目录
-model_dir = 'saved_models'
-os.makedirs(model_dir, exist_ok=True)  # 创建目录，如果已存在则不操作
+# model_dir = 'saved_models'  # 已不再需要在此脚本中保存模型
 
 class NaNLossError(Exception):
     """自定义异常，当训练过程中出现 NaN 损失时抛出。"""
@@ -231,11 +230,7 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
         print(f"平均误差距离（米）: {mean_error_distance:.2f}")
         print(f"中位数误差距离（米）: {median_error_distance:.2f}")
 
-        # 保存模型
-        print("保存回归模型...")
-        model_path = os.path.join(model_dir, 'coordinate_regression_model.pkl')
-        joblib.dump(regression_model, model_path)
-        print(f"回归模型已保存到 {model_path}。")
+        # 不再保存回归模型
 
         # 生成可视化图表
         fig = plt.figure(figsize=(14, 10), constrained_layout=True)
@@ -269,8 +264,8 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
                     if i + j < len(params_items):
                         key, value = params_items[i + j]
                         line += f"{key}: {value}    "
-                params_lines.append(line.strip())
-            params_text += '\n'.join(params_lines)
+                    params_lines.append(line.strip())
+                params_text += '\n'.join(params_lines)
 
         # 格式化评估指标为多列文本
         metrics_text = (
@@ -376,11 +371,7 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
         print("分类报告：")
         print(class_report)
 
-        # 保存模型
-        print("保存分类模型...")
-        model_path = os.path.join(model_dir, 'floor_classification_model.pkl')
-        joblib.dump(classification_model, model_path)
-        print(f"分类模型已保存到 {model_path}。")
+        # 不再保存分类模型
 
         # 生成可视化图表
         fig = plt.figure(figsize=(14, 10), constrained_layout=True)
@@ -410,8 +401,8 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
                     if i + j < len(params_items):
                         key, value = params_items[i + j]
                         line += f"{key}: {value}    "
-                params_lines.append(line.strip())
-            params_text += '\n'.join(params_lines)
+                    params_lines.append(line.strip())
+                params_text += '\n'.join(params_lines)
 
         # 格式化评估指标为文本
         metrics_text = (
