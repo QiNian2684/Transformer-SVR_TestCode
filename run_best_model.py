@@ -1,5 +1,6 @@
 # run_best_model.py
 
+import os
 import torch
 import numpy as np
 from data_preprocessing import load_and_preprocess_data
@@ -7,65 +8,103 @@ from model_definition import WiFiTransformerAutoencoder
 from training_and_evaluation import (
     train_autoencoder,
     extract_features,
-    train_and_evaluate_svr,
-    compute_error_distances,
+    train_and_evaluate_classification_model,
+    train_and_evaluate_regression_model,
     NaNLossError
 )
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-import joblib
-import os
 import json
+import shutil
+from datetime import datetime
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # 引入3D绘图工具包
+import random
+
+def set_seed(seed=42):
+    """设置随机种子以确保可重复性"""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 def main():
+    """
+    主程序，读取最佳超参数配置，运行分类和回归模型，并保存结果图片。
+    """
+    # 设置随机种子
+    set_seed()
+
+    # === 参数设置 ===
+    # 设备配置
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"使用设备: {device}")
+
+    # 数据路径
+    train_path = 'UJIndoorLoc/trainingData.csv'
+    test_path = 'UJIndoorLoc/validationData.csv'
+
+    # === 数据加载与预处理 ===
+    print("加载并预处理数据...")
+    X_train, y_train_coords, y_train_floor, X_val, y_val_coords, y_val_floor, X_test, y_test_coords, y_test_floor, scaler_X, scaler_y, label_encoder = load_and_preprocess_data(train_path, test_path)
+
+    # === 读取最佳超参数 ===
+    # 获取分类和回归结果目录中最新的结果文件夹
+
+    # 获取分类结果目录中最新的结果文件夹
+    classification_results_dir = 'results/classification'
+    classification_dirs = [os.path.join(classification_results_dir, d) for d in os.listdir(classification_results_dir) if os.path.isdir(os.path.join(classification_results_dir, d))]
+    classification_dirs.sort(key=os.path.getmtime, reverse=True)
+    if classification_dirs:
+        latest_classification_dir = classification_dirs[0]
+        classification_params_path = os.path.join(latest_classification_dir, 'best_hyperparameters_classification.json')
+    else:
+        print("没有找到分类的最佳超参数文件。")
+        return
+
+    # 获取回归结果目录中最新的结果文件夹
+    regression_results_dir = 'results/regression'
+    regression_dirs = [os.path.join(regression_results_dir, d) for d in os.listdir(regression_results_dir) if os.path.isdir(os.path.join(regression_results_dir, d))]
+    regression_dirs.sort(key=os.path.getmtime, reverse=True)
+    if regression_dirs:
+        latest_regression_dir = regression_dirs[0]
+        regression_params_path = os.path.join(latest_regression_dir, 'best_hyperparameters_regression.json')
+    else:
+        print("没有找到回归的最佳超参数文件。")
+        return
+
+    # 加载最佳超参数
+    with open(classification_params_path, 'r', encoding='utf-8') as f:
+        classification_params = json.load(f)
+    with open(regression_params_path, 'r', encoding='utf-8') as f:
+        regression_params = json.load(f)
+
+    # === 创建保存结果的文件夹 ===
+    best_result_dir = 'best_result'
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    current_run_dir = os.path.join(best_result_dir, timestamp)
+    os.makedirs(current_run_dir, exist_ok=True)
+    print(f"结果将保存到: {current_run_dir}")
+
+    # === 运行分类模型 ===
+    print("运行最佳分类模型...")
     try:
-        # 固定训练轮数
-        epochs = 200  # 根据超参数调优的最佳轮数进行调整
+        # 提取分类模型的参数
+        model_dim = classification_params['model_dim']
+        num_heads = classification_params['num_heads']
+        num_layers = classification_params['num_layers']
+        dropout = classification_params['dropout']
+        learning_rate = classification_params['learning_rate']
+        batch_size = classification_params['batch_size']
+        early_stopping_patience = classification_params['early_stopping_patience']
+        svc_C = classification_params['svc_C']
+        svc_kernel = classification_params['svc_kernel']
+        svc_gamma = classification_params['svc_gamma']
+        svc_degree = classification_params.get('svc_degree', 3)
+        svc_coef0 = classification_params.get('svc_coef0', 0.0)
 
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"使用设备: {device}")
+        # 收集当前超参数组合
+        current_params = classification_params
 
-        # 1. 数据加载与预处理
-        train_path = 'UJIndoorLoc/trainingData_building0.csv'
-        test_path = 'UJIndoorLoc/validationData_building0.csv'
-        print("加载并预处理数据...")
-        X_train, y_train, X_val, y_val, X_test, y_test, scaler_X, scaler_y = load_and_preprocess_data(train_path, test_path)
-
-        # 2. 加载最优超参数
-        best_hyperparams_path = 'best_hyperparameters_optuna.json'
-        if not os.path.exists(best_hyperparams_path):
-            print(f"最优超参数文件 {best_hyperparams_path} 不存在，请先运行超参数调优。")
-            return
-
-        with open(best_hyperparams_path, 'r', encoding='utf-8') as f:
-            best_params = json.load(f)
-
-        print("\n加载到的最优超参数组合：")
-        print(json.dumps(best_params, indent=4, ensure_ascii=False))
-
-        # 提取超参数
-        model_dim = best_params['model_dim']
-        num_heads = best_params['num_heads']
-        num_layers = best_params['num_layers']
-        dropout = best_params['dropout']
-        learning_rate = best_params['learning_rate']
-        batch_size = best_params['batch_size']
-        patience = best_params['early_stopping_patience']
-        svr_kernel = best_params['svr_kernel']
-        svr_C = best_params['svr_C']
-        svr_epsilon = best_params['svr_epsilon']
-        svr_gamma = best_params['svr_gamma']
-        # 如果 kernel 是 'poly'，需要提取 degree 和 coef0
-        if svr_kernel == 'poly':
-            svr_degree = best_params['svr_degree']
-            svr_coef0 = best_params['svr_coef0']
-        else:
-            svr_degree = 3  # 默认值
-            svr_coef0 = 0.0  # 默认值
-
-        # 3. 初始化 Transformer 自编码器模型
-        print("\n初始化 Transformer 自编码器模型...")
+        # 初始化 Transformer 自编码器模型
         model = WiFiTransformerAutoencoder(
             model_dim=model_dim,
             num_heads=num_heads,
@@ -73,117 +112,145 @@ def main():
             dropout=dropout
         ).to(device)
 
-        # 4. 训练 Transformer 自编码器模型
-        print("\n训练 Transformer 自编码器模型...")
-        model = train_autoencoder(
+        # 训练自编码器
+        model, train_loss_list, val_loss_list = train_autoencoder(
             model, X_train, X_val,
             device=device,
-            epochs=epochs,
+            epochs=200,
             batch_size=batch_size,
             learning_rate=learning_rate,
-            early_stopping_patience=patience
+            early_stopping_patience=early_stopping_patience
         )
 
-        # 5. 提取特征
-        print("\n提取训练和测试特征...")
+        # 提取特征
         X_train_features = extract_features(model, X_train, device=device, batch_size=batch_size)
-        X_val_features = extract_features(model, X_val, device=device, batch_size=batch_size)
         X_test_features = extract_features(model, X_test, device=device, batch_size=batch_size)
 
-        # 检查提取的特征中是否存在 NaN
-        if np.isnan(X_train_features).any() or np.isnan(X_test_features).any():
-            print("提取的特征中包含 NaN，无法训练 SVR 模型。")
-            return
+        # 定义 SVC 参数
+        svc_params = {
+            'C': svc_C,
+            'kernel': svc_kernel,
+            'gamma': svc_gamma,
+            'degree': svc_degree,
+            'coef0': svc_coef0,
+        }
 
-        # 6. 逆标准化目标变量
-        y_train_original = scaler_y.inverse_transform(y_train)
-        y_val_original = scaler_y.inverse_transform(y_val)
-        y_test_original = scaler_y.inverse_transform(y_test)
+        # 训练并评估分类模型
+        classification_model, accuracy = train_and_evaluate_classification_model(
+            X_train_features, y_train_floor,
+            X_test_features, y_test_floor,
+            svc_params=svc_params,
+            training_params=current_params,
+            train_loss_list=train_loss_list,
+            val_loss_list=val_loss_list,
+            label_encoder=label_encoder,
+            output_dir=current_run_dir,
+            image_index=1  # 图片编号为1
+        )
 
-        # 7. 定义 SVR 参数
+        # === 保存分类结果图片 ===
+        classification_image_path = os.path.join(current_run_dir, 'classification_result.png')
+        source_image_path = os.path.join(current_run_dir, f"{1:04d}.png")
+        shutil.copyfile(source_image_path, classification_image_path)
+        print(f"分类结果图片已保存为 {classification_image_path}")
+
+        # 显示图片
+        img = plt.imread(classification_image_path)
+        plt.imshow(img)
+        plt.axis('off')
+        plt.show()
+    except Exception as e:
+        print(f"运行分类模型时发生错误：{e}")
+
+    # === 运行回归模型 ===
+    print("运行最佳回归模型...")
+    try:
+        # 提取回归模型的参数
+        model_dim = regression_params['model_dim']
+        num_heads = regression_params['num_heads']
+        num_layers = regression_params['num_layers']
+        dropout = regression_params['dropout']
+        learning_rate = regression_params['learning_rate']
+        batch_size = regression_params['batch_size']
+        early_stopping_patience = regression_params['early_stopping_patience']
+        svr_kernel = regression_params['svr_kernel']
+        svr_C = regression_params['svr_C']
+        svr_epsilon = regression_params['svr_epsilon']
+        svr_gamma = regression_params['svr_gamma']
+        svr_degree = regression_params.get('svr_degree', 3)
+        svr_coef0 = regression_params.get('svr_coef0', 0.0)
+
+        # 收集当前超参数组合
+        current_params = regression_params
+
+        # 初始化 Transformer 自编码器模型
+        model = WiFiTransformerAutoencoder(
+            model_dim=model_dim,
+            num_heads=num_heads,
+            num_layers=num_layers,
+            dropout=dropout
+        ).to(device)
+
+        # 训练自编码器
+        model, train_loss_list, val_loss_list = train_autoencoder(
+            model, X_train, X_val,
+            device=device,
+            epochs=200,
+            batch_size=batch_size,
+            learning_rate=learning_rate,
+            early_stopping_patience=early_stopping_patience
+        )
+
+        # 提取特征
+        X_train_features = extract_features(model, X_train, device=device, batch_size=batch_size)
+        X_test_features = extract_features(model, X_test, device=device, batch_size=batch_size)
+
+        # 逆标准化坐标目标变量
+        y_train_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_train_coords[:, 0].reshape(-1, 1))
+        y_train_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_train_coords[:, 1].reshape(-1, 1))
+        y_train_coords_original = np.hstack((y_train_longitude_original, y_train_latitude_original))
+
+        y_test_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_test_coords[:, 0].reshape(-1, 1))
+        y_test_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_test_coords[:, 1].reshape(-1, 1))
+        y_test_coords_original = np.hstack((y_test_longitude_original, y_test_latitude_original))
+
+        # 定义 SVR 参数
         svr_params = {
             'kernel': svr_kernel,
             'C': svr_C,
             'epsilon': svr_epsilon,
             'gamma': svr_gamma,
             'degree': svr_degree,
-            'coef0': svr_coef0
+            'coef0': svr_coef0,
         }
 
-        # 8. 训练并评估 SVR 模型
-        print("\n训练并评估 SVR 回归模型...")
-        svr_model = train_and_evaluate_svr(
-            X_train_features, y_train_original,
-            X_test_features, y_test_original,
-            svr_params=svr_params
+        # 训练并评估回归模型
+        regression_model, mean_error_distance = train_and_evaluate_regression_model(
+            X_train_features, y_train_coords_original,
+            X_test_features, y_test_coords_original,
+            svr_params=svr_params,
+            training_params=current_params,
+            train_loss_list=train_loss_list,
+            val_loss_list=val_loss_list,
+            output_dir=current_run_dir,
+            image_index=2  # 图片编号为2
         )
 
-        # 9. 预测并评估
-        print("\n预测并计算评估指标...")
-        y_pred = svr_model.predict(X_test_features)
+        # === 保存回归结果图片 ===
+        regression_image_path = os.path.join(current_run_dir, 'regression_result.png')
+        source_image_path = os.path.join(current_run_dir, f"{2:04d}.png")
+        shutil.copyfile(source_image_path, regression_image_path)
+        print(f"回归结果图片已保存为 {regression_image_path}")
 
-        # 轮廓预测：四舍五入楼层
-        y_pred_rounded = y_pred.copy()
-        y_pred_rounded[:, 2] = np.round(y_pred_rounded[:, 2])
-
-        mse = mean_squared_error(y_test_original, y_pred)
-        mae = mean_absolute_error(y_test_original, y_pred)
-        r2 = r2_score(y_test_original, y_pred)
-        error_distances = compute_error_distances(y_test_original, y_pred)
-        mean_error_distance = np.mean(error_distances)
-        median_error_distance = np.median(error_distances)
-
-        print("\n评估结果：")
-        print(f"MSE: {mse:.6f}")
-        print(f"MAE: {mae:.6f}")
-        print(f"R^2 Score: {r2:.6f}")
-        print(f"平均误差距离（米）: {mean_error_distance:.2f}")
-        print(f"中位数误差距离（米）: {median_error_distance:.2f}")
-
-        # 分别评估每个目标变量
-        print("\n各目标变量的评估结果：")
-        for i, target in enumerate(['LONGITUDE', 'LATITUDE', 'FLOOR']):
-            mse_i = mean_squared_error(y_test_original[:, i], y_pred[:, i])
-            mae_i = mean_absolute_error(y_test_original[:, i], y_pred[:, i])
-            r2_i = r2_score(y_test_original[:, i], y_pred[:, i])
-            print(f"{target} - MSE: {mse_i:.6f}, MAE: {mae_i:.6f}, R^2 Score: {r2_i:.6f}")
-
-        # 计算误差距离并生成3D误差散点图
-        error_x = y_pred[:, 0] - y_test_original[:, 0]
-        error_y = y_pred[:, 1] - y_test_original[:, 1]
-        error_floor = y_pred[:, 2] - y_test_original[:, 2]
-
-        # 将楼层误差转换为米
-        FLOOR_HEIGHT = 3  # 根据您的设定，每层楼的高度
-        error_z = error_floor * FLOOR_HEIGHT
-
-        # 配置 Matplotlib 使用支持中文的字体
-        plt.rcParams['font.sans-serif'] = ['SimHei']  # 或者 ['Microsoft YaHei']，根据您的系统字体选择
-        plt.rcParams['axes.unicode_minus'] = False  # 解决负号 '-' 显示为方块的问题
-
-        # 创建3D图形
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.add_subplot(111, projection='3d')
-
-        # 计算每个点的误差距离
-        error_distance = np.sqrt(error_x ** 2 + error_y ** 2 + error_z ** 2)
-
-        scatter = ax.scatter(error_x, error_y, error_z, c=error_distance, cmap='viridis', alpha=0.6)
-        cbar = plt.colorbar(scatter, ax=ax, pad=0.1)
-        cbar.set_label('误差距离 (米)')
-
-        ax.set_title('3D 预测误差散点图')
-        ax.set_xlabel('经度误差 (米)')
-        ax.set_ylabel('纬度误差 (米)')
-        ax.set_zlabel('高度误差 (米)')  # Z 代表垂直误差
-
+        # 显示图片
+        img = plt.imread(regression_image_path)
+        plt.imshow(img)
+        plt.axis('off')
         plt.show()
-
-        print("\n模型训练和评估完成。")
-
     except Exception as e:
-        print(f"程序遇到未处理的异常：{e}")
+        print(f"运行回归模型时发生错误：{e}")
+
+    print("最佳模型已运行完毕，结果已保存。")
 
 if __name__ == '__main__':
     main()
-
