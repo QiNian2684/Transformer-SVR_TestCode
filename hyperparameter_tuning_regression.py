@@ -80,7 +80,7 @@ def main():
             if not num_heads_options:
                 raise TrialPruned("model_dim 不可被任何 num_heads 整除。")
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
-            num_layers = trial.suggest_int('num_layers', low=4, high=64, log=True)
+            num_layers = trial.suggest_int('num_layers', low=4, high=64)
             dropout = trial.suggest_float('dropout', 0.1, 0.5)
             learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-2, log=True)
             batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512])
