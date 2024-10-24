@@ -150,3 +150,5 @@ dmypy.json
 *.wav
 *.flac
 *.m4a
+
+*.json
