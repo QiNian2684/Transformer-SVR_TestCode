@@ -1,0 +1,12 @@
+{
+    "model_dim": 16,
+    "num_heads": 16,
+    "num_layers": 9,
+    "dropout": 0.1392861748721675,
+    "learning_rate": 0.00533735591468636,
+    "batch_size": 64,
+    "early_stopping_patience": 8,
+    "svc_C": 0.30200122578956445,
+    "svc_kernel": "linear",
+    "svc_gamma": "scale"
+}

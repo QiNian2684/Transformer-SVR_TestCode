@@ -1,0 +1,15 @@
+{
+    "model_dim": 128,
+    "num_heads": 8,
+    "num_layers": 12,
+    "dropout": 0.33958105517621195,
+    "learning_rate": 2.3846632256169124e-06,
+    "batch_size": 128,
+    "early_stopping_patience": 8,
+    "svr_kernel": "poly",
+    "svr_C": 54.523712330818704,
+    "svr_epsilon": 0.41703839746752225,
+    "svr_gamma": "scale",
+    "svr_degree": 5,
+    "svr_coef0": 0.6414917111227488
+}

@@ -16,6 +16,10 @@ plt.rcParams['font.family'] = 'Times New Roman'
 # 定义每层的高度（单位：米）
 FLOOR_HEIGHT = 3  # 您可以根据需要调整此值
 
+# 定义模型保存目录
+model_dir = 'saved_models'
+os.makedirs(model_dir, exist_ok=True)  # 创建目录，如果已存在则不操作
+
 class NaNLossError(Exception):
     """自定义异常，当训练过程中出现 NaN 损失时抛出。"""
     pass
@@ -229,8 +233,9 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
 
         # 保存模型
         print("保存回归模型...")
-        joblib.dump(regression_model, 'coordinate_regression_model.pkl')
-        print("回归模型已保存。")
+        model_path = os.path.join(model_dir, 'coordinate_regression_model.pkl')
+        joblib.dump(regression_model, model_path)
+        print(f"回归模型已保存到 {model_path}。")
 
         # 生成可视化图表
         fig = plt.figure(figsize=(14, 10), constrained_layout=True)
@@ -373,8 +378,9 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
 
         # 保存模型
         print("保存分类模型...")
-        joblib.dump(classification_model, 'floor_classification_model.pkl')
-        print("分类模型已保存。")
+        model_path = os.path.join(model_dir, 'floor_classification_model.pkl')
+        joblib.dump(classification_model, model_path)
+        print(f"分类模型已保存到 {model_path}。")
 
         # 生成可视化图表
         fig = plt.figure(figsize=(14, 10), constrained_layout=True)

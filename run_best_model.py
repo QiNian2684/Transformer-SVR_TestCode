@@ -30,6 +30,10 @@ def main():
     """
     主程序，读取最佳超参数配置，运行分类和回归模型，并保存结果图片。
     """
+    #设置epoch
+    classification_epoch = 5
+    regression_epoch = 5
+
     # 设置随机种子
     set_seed()
 
@@ -47,27 +51,18 @@ def main():
     X_train, y_train_coords, y_train_floor, X_val, y_val_coords, y_val_floor, X_test, y_test_coords, y_test_floor, scaler_X, scaler_y, label_encoder = load_and_preprocess_data(train_path, test_path)
 
     # === 读取最佳超参数 ===
-    # 获取分类和回归结果目录中最新的结果文件夹
+    # 设置存放最佳模型参数的文件夹
+    best_model_json_dir = 'best_model_json'
 
-    # 获取分类结果目录中最新的结果文件夹
-    classification_results_dir = 'results/classification'
-    classification_dirs = [os.path.join(classification_results_dir, d) for d in os.listdir(classification_results_dir) if os.path.isdir(os.path.join(classification_results_dir, d))]
-    classification_dirs.sort(key=os.path.getmtime, reverse=True)
-    if classification_dirs:
-        latest_classification_dir = classification_dirs[0]
-        classification_params_path = os.path.join(latest_classification_dir, 'best_hyperparameters_classification.json')
-    else:
+    # 获取分类模型的超参数文件路径
+    classification_params_path = os.path.join(best_model_json_dir, 'best_hyperparameters_classification.json')
+    if not os.path.exists(classification_params_path):
         print("没有找到分类的最佳超参数文件。")
         return
 
-    # 获取回归结果目录中最新的结果文件夹
-    regression_results_dir = 'results/regression'
-    regression_dirs = [os.path.join(regression_results_dir, d) for d in os.listdir(regression_results_dir) if os.path.isdir(os.path.join(regression_results_dir, d))]
-    regression_dirs.sort(key=os.path.getmtime, reverse=True)
-    if regression_dirs:
-        latest_regression_dir = regression_dirs[0]
-        regression_params_path = os.path.join(latest_regression_dir, 'best_hyperparameters_regression.json')
-    else:
+    # 获取回归模型的超参数文件路径
+    regression_params_path = os.path.join(best_model_json_dir, 'best_hyperparameters_regression.json')
+    if not os.path.exists(regression_params_path):
         print("没有找到回归的最佳超参数文件。")
         return
 
@@ -83,6 +78,10 @@ def main():
     current_run_dir = os.path.join(best_result_dir, timestamp)
     os.makedirs(current_run_dir, exist_ok=True)
     print(f"结果将保存到: {current_run_dir}")
+
+    # === 定义模型保存目录 ===
+    model_dir = 'saved_models'
+    os.makedirs(model_dir, exist_ok=True)  # 创建目录，如果已存在则不操作
 
     # === 运行分类模型 ===
     print("运行最佳分类模型...")
@@ -116,7 +115,7 @@ def main():
         model, train_loss_list, val_loss_list = train_autoencoder(
             model, X_train, X_val,
             device=device,
-            epochs=200,
+            epochs=classification_epoch,
             batch_size=batch_size,
             learning_rate=learning_rate,
             early_stopping_patience=early_stopping_patience
@@ -195,7 +194,7 @@ def main():
         model, train_loss_list, val_loss_list = train_autoencoder(
             model, X_train, X_val,
             device=device,
-            epochs=200,
+            epochs=regression_epoch,
             batch_size=batch_size,
             learning_rate=learning_rate,
             early_stopping_patience=early_stopping_patience
