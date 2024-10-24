@@ -84,9 +84,11 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
 
     for epoch in range(epochs):
         model.train()
-        train_losses = []
+        total_train_loss = 0.0
+        total_train_samples = 0
         for X_batch, _ in train_loader:
             X_batch = X_batch.to(device)
+            batch_size_current = X_batch.size(0)
 
             optimizer.zero_grad()
             outputs = model(X_batch)
@@ -98,19 +100,25 @@ def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, 
 
             optimizer.step()
 
-            train_losses.append(loss.item())
+            total_train_loss += loss.item() * batch_size_current
+            total_train_samples += batch_size_current
+
+        avg_train_loss = total_train_loss / total_train_samples
 
         model.eval()
-        val_losses = []
+        total_val_loss = 0.0
+        total_val_samples = 0
         with torch.no_grad():
             for X_batch, _ in val_loader:
                 X_batch = X_batch.to(device)
+                batch_size_current = X_batch.size(0)
                 outputs = model(X_batch)
                 loss = criterion(outputs, X_batch)
-                val_losses.append(loss.item())
+                total_val_loss += loss.item() * batch_size_current
+                total_val_samples += batch_size_current
 
-        avg_train_loss = np.mean(train_losses)
-        avg_val_loss = np.mean(val_losses)
+        avg_val_loss = total_val_loss / total_val_samples
+
         print(f"Epoch [{epoch+1}/{epochs}], 训练损失: {avg_train_loss:.6f}, 验证损失: {avg_val_loss:.6f}")
 
         # 将损失添加到列表中
@@ -181,8 +189,8 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
     - y_test_coords: 测试集坐标（经度、纬度）
     - svr_params: SVR模型的参数字典（可选）
     - training_params: 训练参数的字典，用于显示在图表中
-    - train_loss_list: 每个 epoch 的训练损失列表（可选）
-    - val_loss_list: 每个 epoch 的验证损失列表（可选）
+    - train_loss_list: 每个 epoch 的训练损失列表（可选，自编码器的损失）
+    - val_loss_list: 每个 epoch 的验证损失列表（可选，自编码器的损失）
     - output_dir: 保存结果图片的目录（可选）
     - image_index: 图片编号，默认从1开始
 
@@ -281,15 +289,15 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
         # 设置字体大小并添加文本
         ax2.text(0.5, 0.5, combined_text, fontsize=12, ha='center', va='center', wrap=True)
 
-        # 第二行：训练和验证损失曲线
+        # 第二行：训练和验证损失曲线（来自自编码器训练）
         ax3 = fig.add_subplot(gs[1, :])
         if train_loss_list is not None and val_loss_list is not None:
             epochs_range = range(1, len(train_loss_list) + 1)
-            ax3.plot(epochs_range, train_loss_list, 'r-', label='Training Loss')
-            ax3.plot(epochs_range, val_loss_list, 'b-', label='Validation Loss')
+            ax3.plot(epochs_range, train_loss_list, 'r-', label='Autoencoder Training Loss')
+            ax3.plot(epochs_range, val_loss_list, 'b-', label='Autoencoder Validation Loss')
             ax3.set_xlabel('Epoch')
             ax3.set_ylabel('Loss')
-            ax3.set_title('Training and Validation Loss')
+            ax3.set_title('Autoencoder Training and Validation Loss')
             ax3.legend()
         else:
             ax3.text(0.5, 0.5, 'No loss data available', fontsize=16, ha='center', va='center')
@@ -298,7 +306,7 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
         # 保存图片
         if output_dir is not None:
             # 修改这里，确保图片编号为四位数
-            image_path = os.path.join(output_dir, f"{image_index:04d}.png")
+            image_path = os.path.join(output_dir, f"{image_index:04d}_regression.png")
             plt.savefig(image_path)
             plt.close(fig)
             print(f"结果图片已保存到 {image_path}")
@@ -328,8 +336,8 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
     - y_test_floor: 测试集楼层标签
     - svc_params: SVC模型的参数字典（可选）
     - training_params: 训练参数的字典，用于显示在图表中
-    - train_loss_list: 每个 epoch 的训练损失列表（可选）
-    - val_loss_list: 每个 epoch 的验证损失列表（可选）
+    - train_loss_list: 每个 epoch 的训练损失列表（可选，自编码器的损失）
+    - val_loss_list: 每个 epoch 的验证损失列表（可选，自编码器的损失）
     - label_encoder: 标签编码器，用于解码楼层标签
     - output_dir: 保存结果图片的目录（可选）
     - image_index: 图片编号，默认从1开始
@@ -419,15 +427,15 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
         # 设置字体大小并添加文本
         ax2.text(0.5, 0.5, combined_text, fontsize=12, ha='center', va='center', wrap=True)
 
-        # 第二行：训练和验证损失曲线
+        # 第二行：训练和验证损失曲线（来自自编码器训练）
         ax3 = fig.add_subplot(gs[1, :])
         if train_loss_list is not None and val_loss_list is not None:
             epochs_range = range(1, len(train_loss_list) + 1)
-            ax3.plot(epochs_range, train_loss_list, 'r-', label='Training Loss')
-            ax3.plot(epochs_range, val_loss_list, 'b-', label='Validation Loss')
+            ax3.plot(epochs_range, train_loss_list, 'r-', label='Autoencoder Training Loss')
+            ax3.plot(epochs_range, val_loss_list, 'b-', label='Autoencoder Validation Loss')
             ax3.set_xlabel('Epoch')
             ax3.set_ylabel('Loss')
-            ax3.set_title('Training and Validation Loss')
+            ax3.set_title('Autoencoder Training and Validation Loss')
             ax3.legend()
         else:
             ax3.text(0.5, 0.5, 'No loss data available', fontsize=16, ha='center', va='center')
@@ -436,7 +444,7 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
         # 保存图片
         if output_dir is not None:
             # 修改这里，确保图片编号为四位数
-            image_path = os.path.join(output_dir, f"{image_index:04d}.png")
+            image_path = os.path.join(output_dir, f"{image_index:04d}_classification.png")
             plt.savefig(image_path)
             plt.close(fig)
             print(f"结果图片已保存到 {image_path}")
