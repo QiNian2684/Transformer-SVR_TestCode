@@ -75,28 +75,56 @@ def main():
 
         try:
             # Transformer 自编码器超参数
+
+            # model_dim: Transformer模型的维度，可选值为[16, 32, 64, 128]。这个参数决定了模型的大小和复杂度。
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
+
+            # num_heads_options: 根据model_dim的可整除性选择的头数选项，保证model_dim可以被num_heads整除。
             num_heads_options = [h for h in [2, 4, 8, 16] if model_dim % h == 0]
+
+            # 如果没有有效的头数选项，则终止当前试验。
             if not num_heads_options:
                 raise TrialPruned("model_dim 不可被任何 num_heads 整除。")
+
+            # num_heads: 选择一个有效的头数，这影响到模型的并行处理能力。
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
+
+            # num_layers: Transformer模型的层数，范围从4到64。层数越多，模型通常越能捕获复杂的特征，但计算成本也越高。
             num_layers = trial.suggest_int('num_layers', low=4, high=64)
+
+            # dropout: 在模型训练时随机丢弃节点的比例，用以防止过拟合，范围从0.1到0.5。
             dropout = trial.suggest_float('dropout', 0.1, 0.5)
+
+            # learning_rate: 学习率，使用对数标度从1e-6到1e-2选择，对模型训练速度和效果有重要影响。
             learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-2, log=True)
+
+            # batch_size: 批大小，可选值为[64, 128, 256, 512]，影响模型的内存需求和训练速度。
             batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512])
+
+            # patience: 早停机制的耐心值，当验证损失在连续多个epoch内未改善时停止训练，范围从5到10。
             patience = trial.suggest_int('early_stopping_patience', 5, 10)
 
             # SVR 超参数
+
+            # svr_kernel: SVR模型的核函数类型，可选['linear', 'poly', 'rbf', 'sigmoid']，影响模型处理数据的方式。
             svr_kernel = trial.suggest_categorical('svr_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+
+            # svr_C: 正则化参数C，使用对数标度从0.1到100选择，C值越大，模型越复杂，容错率越低。
             svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
+
+            # svr_epsilon: SVR模型的epsilon，定义了不惩罚预测误差在此值内的观测，范围从0.01到1.0。
             svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 1.0)
+
+            # svr_gamma: SVR核函数的gamma参数，可选['scale', 'auto']，影响核函数的形状和数据的映射。
             svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
+
+            # 如果核函数是多项式（poly），则需要选择多项式的度数和coef0参数。
             if svr_kernel == 'poly':
-                svr_degree = trial.suggest_int('svr_degree', 2, 5)
-                svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)
+                svr_degree = trial.suggest_int('svr_degree', 2, 5)  # 多项式的度数
+                svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)  # 多项式核函数中的独立项系数
             else:
-                svr_degree = 3  # 默认值
-                svr_coef0 = 0.0  # 默认值
+                svr_degree = 3  # 默认值为3
+                svr_coef0 = 0.0  # 默认coef0为0.0
 
             # 收集当前超参数组合
             current_params = {
