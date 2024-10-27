@@ -67,6 +67,9 @@ def main():
     best_mean_error_distance = float('inf')
     best_regression_model = None
 
+    # 定义最佳超参数文件路径
+    best_params_path = os.path.join(current_run_dir, 'best_hyperparameters_regression.json')
+
     # === 定义优化目标函数 ===
     def objective(trial):
         nonlocal image_index  # 引入外部变量
@@ -204,7 +207,7 @@ def main():
                 image_index=trial.number + 1  # 使用 trial.number + 1 作为图片编号
             )
 
-            # 如果当前模型表现更好，保存模型
+            # 如果当前模型表现更好，保存模型和超参数
             if mean_error_distance < best_mean_error_distance:
                 best_mean_error_distance = mean_error_distance
                 best_regression_model = regression_model
@@ -212,6 +215,10 @@ def main():
                 best_model_path = os.path.join(model_dir, 'best_regression_model.pkl')
                 joblib.dump(best_regression_model, best_model_path)
                 print(f"最佳回归模型已保存到 {best_model_path}。")
+                # 保存最佳超参数
+                with open(best_params_path, 'w', encoding='utf-8') as f:
+                    json.dump(current_params, f, indent=4, ensure_ascii=False)
+                print(f"最佳超参数已保存到 {best_params_path}。")
 
             # 返回平均误差距离作为优化目标
             return mean_error_distance
@@ -235,17 +242,13 @@ def main():
     print("最佳超参数:")
     print(json.dumps(best_trial.params, indent=4, ensure_ascii=False))
 
-    # 保存最佳超参数
-    best_params_path = os.path.join(current_run_dir, 'best_hyperparameters_regression.json')
-    with open(best_params_path, 'w', encoding='utf-8') as f:
-        json.dump(best_trial.params, f, indent=4, ensure_ascii=False)
-    print(f"最佳超参数已保存到 {best_params_path}。")
+    # 已在训练过程中实时保存最佳超参数，因此这里无需再次保存
 
     # === 保存最佳试验的结果图片为“0000.png” ===
     try:
         best_trial_number = best_trial.number
         best_image_index = best_trial_number + 1  # 与保存图片时的编号对应
-        best_image_name = f"{best_image_index:04d}.png"
+        best_image_name = f"{best_image_index:04d}_regression.png"
         best_image_path = os.path.join(current_run_dir, best_image_name)
         destination_image_path = os.path.join(current_run_dir, "0000.png")
         # 复制最佳试验的图片并重命名为“0000.png”

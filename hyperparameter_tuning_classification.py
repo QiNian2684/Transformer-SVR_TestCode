@@ -29,8 +29,8 @@ def set_seed(seed=42):
 def main():
 
     # 固定训练参数
-    epochs = 200  # 训练轮数
-    n_trials = 500  # Optuna 试验次数，根据计算资源调整
+    epochs = 2  # 训练轮数
+    n_trials = 400  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
     set_seed()
@@ -66,6 +66,9 @@ def main():
     # 用于保存最佳模型
     best_accuracy = 0
     best_classification_model = None
+
+    # 定义最佳超参数文件路径
+    best_params_path = os.path.join(current_run_dir, 'best_hyperparameters_classification.json')
 
     # === 定义优化目标函数 ===
     def objective(trial):
@@ -203,7 +206,7 @@ def main():
                 image_index=trial.number + 1  # 使用 trial.number + 1 作为图片编号
             )
 
-            # 如果当前模型表现更好，保存模型
+            # 如果当前模型表现更好，保存模型和超参数
             if accuracy > best_accuracy:
                 best_accuracy = accuracy
                 best_classification_model = classification_model
@@ -211,6 +214,10 @@ def main():
                 best_model_path = os.path.join(model_dir, 'best_classification_model.pkl')
                 joblib.dump(best_classification_model, best_model_path)
                 print(f"最佳分类模型已保存到 {best_model_path}。")
+                # 保存最佳超参数
+                with open(best_params_path, 'w', encoding='utf-8') as f:
+                    json.dump(current_params, f, indent=4, ensure_ascii=False)
+                print(f"最佳超参数已保存到 {best_params_path}。")
 
             # 返回准确率作为优化目标
             return accuracy
@@ -234,17 +241,13 @@ def main():
     print("最佳超参数:")
     print(json.dumps(best_trial.params, indent=4, ensure_ascii=False))
 
-    # 保存最佳超参数
-    best_params_path = os.path.join(current_run_dir, 'best_hyperparameters_classification.json')
-    with open(best_params_path, 'w', encoding='utf-8') as f:
-        json.dump(best_trial.params, f, indent=4, ensure_ascii=False)
-    print(f"最佳超参数已保存到 {best_params_path}。")
+    # 已在训练过程中实时保存最佳超参数，因此这里无需再次保存
 
     # === 保存最佳试验的结果图片为“0000.png” ===
     try:
         best_trial_number = best_trial.number
         best_image_index = best_trial_number + 1  # 与保存图片时的编号对应
-        best_image_name = f"{best_image_index:04d}.png"
+        best_image_name = f"{best_image_index:04d}_classification.png"
         best_image_path = os.path.join(current_run_dir, best_image_name)
         destination_image_path = os.path.join(current_run_dir, "0000.png")
         # 复制最佳试验的图片并重命名为“0000.png”
