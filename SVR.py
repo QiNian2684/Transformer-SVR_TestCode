@@ -2,55 +2,164 @@ import pandas as pd
 import numpy as np
 from sklearn.svm import SVR
 from sklearn.metrics import mean_squared_error
+import optuna
 
-# Parameters
-FLOOR_HEIGHT = 6  # Floor height in meters
-SVR_PARAMS = {'C': 1.0, 'epsilon': 0.1, 'kernel': 'rbf'}  # Default SVR parameters
 
-# Load data
-train_data = pd.read_csv('UJIndoorLoc/trainingData_building0.csv')
-validation_data = pd.read_csv('UJIndoorLoc/validationData_building0.csv')
+def main():
+    train_times = 200
 
-# Select data for building 0
-train_data = train_data[train_data['BUILDINGID'] == 0]
-validation_data = validation_data[validation_data['BUILDINGID'] == 0]
+    print("=== Indoor Location Prediction with SVR and Optuna ===\n")
 
-# Separate features and targets
-features_train = train_data.iloc[:, :-9]  # Assuming the last 9 columns are target and location info
-target_train = train_data.loc[:, ['LONGITUDE', 'LATITUDE', 'FLOOR']]
+    # Load data
+    print("Loading training and validation data...")
+    train_data = pd.read_csv('UJIndoorLoc/trainingData.csv')  # Updated file path to include all buildings
+    validation_data = pd.read_csv('UJIndoorLoc/validationData.csv')  # Updated file path to include all buildings
+    print("Data loaded successfully.\n")
 
-features_val = validation_data.iloc[:, :-9]
-target_val = validation_data.loc[:, ['LONGITUDE', 'LATITUDE', 'FLOOR']]
+    # Optional: Display basic information about the datasets
+    print("Training Data Shape:", train_data.shape)
+    print("Validation Data Shape:", validation_data.shape, "\n")
 
-# Train models
-svr_lon = SVR(**SVR_PARAMS)
-svr_lat = SVR(**SVR_PARAMS)
-svr_floor = SVR(**SVR_PARAMS)
+    # Separate features and targets
+    print("Separating features and targets...")
+    # Adjust the columns to drop based on your dataset's actual structure
+    features_train = train_data.drop(columns=[
+        'LONGITUDE', 'LATITUDE', 'FLOOR', 'BUILDINGID',
+        'SPACEID', 'RELATIVEPOSITION', 'USERID',
+        'PHONEID', 'TIMESTAMP'
+    ])
+    target_train = train_data.loc[:, ['LONGITUDE', 'LATITUDE']]
 
-svr_lon.fit(features_train, target_train['LONGITUDE'])
-svr_lat.fit(features_train, target_train['LATITUDE'])
-svr_floor.fit(features_train, target_train['FLOOR'])
+    features_val = validation_data.drop(columns=[
+        'LONGITUDE', 'LATITUDE', 'FLOOR', 'BUILDINGID',
+        'SPACEID', 'RELATIVEPOSITION', 'USERID',
+        'PHONEID', 'TIMESTAMP'
+    ])
+    target_val = validation_data.loc[:, ['LONGITUDE', 'LATITUDE']]
+    print("Features and targets separated.\n")
 
-# Predict
-pred_lon = svr_lon.predict(features_val)
-pred_lat = svr_lat.predict(features_val)
-pred_floor = svr_floor.predict(features_val) * FLOOR_HEIGHT  # Convert floors to meters
+    # Define objective function for Optuna
+    def objective(trial):
+        print(f"--- Starting Trial {trial.number + 1} ---")
 
-# Calculate MSE
-mse_lon = mean_squared_error(target_val['LONGITUDE'], pred_lon)
-mse_lat = mean_squared_error(target_val['LATITUDE'], pred_lat)
-mse_floor = mean_squared_error(target_val['FLOOR'] * FLOOR_HEIGHT, pred_floor)  # Convert to meters
+        # Suggest hyperparameters using suggest_float with log=True
+        C = trial.suggest_float('C', 1e-3, 1e3, log=True)
+        epsilon = trial.suggest_float('epsilon', 1e-3, 1e1, log=True)
+        kernel = trial.suggest_categorical('kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
 
-# Predicted and actual coordinates
-predictions = np.vstack((pred_lon, pred_lat, pred_floor)).T
-actuals = np.vstack((target_val['LONGITUDE'], target_val['LATITUDE'], target_val['FLOOR'] * FLOOR_HEIGHT)).T
+        if kernel in ['rbf', 'poly', 'sigmoid']:
+            gamma = trial.suggest_float('gamma', 1e-4, 1e1, log=True)
+        else:
+            gamma = 'scale'
 
-# Calculate Euclidean distance
-differences = np.sqrt(np.sum((predictions - actuals) ** 2, axis=1))
+        if kernel == 'poly':
+            degree = trial.suggest_int('degree', 2, 5)
+        else:
+            degree = 3  # default degree
 
-# Calculate average 3D error
-average_3d_error = np.mean(differences)
+        print(
+            f"Trial {trial.number + 1} parameters: C={C:.4f}, epsilon={epsilon:.4f}, kernel={kernel}, gamma={gamma}, degree={degree}")
 
-print("Predicted coordinates (meters):", list(zip(pred_lon, pred_lat, pred_floor)))
-print("MSE for Longitude: {:.2f}, Latitude: {:.2f}, Floor Height: {:.2f} meters".format(mse_lon, mse_lat, mse_floor))
-print("Average 3D error (meters):", average_3d_error)
+        # Train SVR models for LONGITUDE and LATITUDE
+        svr_lon = SVR(C=C, epsilon=epsilon, kernel=kernel, gamma=gamma, degree=degree)
+        svr_lat = SVR(C=C, epsilon=epsilon, kernel=kernel, gamma=gamma, degree=degree)
+
+        svr_lon.fit(features_train, target_train['LONGITUDE'])
+        svr_lat.fit(features_train, target_train['LATITUDE'])
+
+        print("Models trained.")
+
+        # Predict on validation data
+        print("Making predictions on validation data...")
+        pred_lon = svr_lon.predict(features_val)
+        pred_lat = svr_lat.predict(features_val)
+        print("Predictions completed.")
+
+        # Calculate errors
+        errors = np.sqrt((pred_lon - target_val['LONGITUDE']) ** 2 + (pred_lat - target_val['LATITUDE']) ** 2)
+        mean_error = np.mean(errors)
+        median_error = np.median(errors)
+
+        print(
+            f"Trial {trial.number + 1} results: Mean Error = {mean_error:.2f} meters, Median Error = {median_error:.2f} meters\n")
+
+        # Return mean error as the objective to minimize
+        return mean_error
+
+    # Optimize hyperparameters
+    print("Starting hyperparameter optimization with Optuna...")
+    study = optuna.create_study(direction='minimize')
+    study.optimize(objective, n_trials=train_times, show_progress_bar=True)
+    print("Hyperparameter optimization completed.\n")
+
+    # Get best hyperparameters
+    best_params = study.best_params
+    print("Best hyperparameters found:")
+    for param, value in best_params.items():
+        print(f"  {param}: {value}")
+    print()
+
+    # Extract best hyperparameters
+    best_C = best_params['C']
+    best_epsilon = best_params['epsilon']
+    best_kernel = best_params['kernel']
+    best_gamma = best_params.get('gamma', 'scale')
+    best_degree = best_params.get('degree', 3)
+
+    # Train models with best hyperparameters
+    print("Training final models with best hyperparameters...")
+    svr_lon = SVR(C=best_C, epsilon=best_epsilon, kernel=best_kernel, gamma=best_gamma, degree=best_degree)
+    svr_lat = SVR(C=best_C, epsilon=best_epsilon, kernel=best_kernel, gamma=best_gamma, degree=best_degree)
+
+    svr_lon.fit(features_train, target_train['LONGITUDE'])
+    svr_lat.fit(features_train, target_train['LATITUDE'])
+    print("Final models trained.\n")
+
+    # Predict on validation data
+    print("Making final predictions on validation data...")
+    pred_lon = svr_lon.predict(features_val)
+    pred_lat = svr_lat.predict(features_val)
+    print("Final predictions completed.\n")
+
+    # Calculate errors
+    print("Calculating error metrics...")
+    errors = np.sqrt((pred_lon - target_val['LONGITUDE']) ** 2 + (pred_lat - target_val['LATITUDE']) ** 2)
+    mean_error = np.mean(errors)
+    median_error = np.median(errors)
+
+    # Calculate MSE
+    mse_lon = mean_squared_error(target_val['LONGITUDE'], pred_lon)
+    mse_lat = mean_squared_error(target_val['LATITUDE'], pred_lat)
+
+    # Predicted and actual coordinates
+    predictions = np.vstack((pred_lon, pred_lat)).T
+    actuals = target_val[['LONGITUDE', 'LATITUDE']].values
+
+    # Calculate Euclidean distances
+    differences = np.sqrt(np.sum((predictions - actuals) ** 2, axis=1))
+
+    # Calculate average 2D error
+    average_2d_error = np.mean(differences)
+
+    print("Error metrics calculated.\n")
+
+    # Print evaluation results
+    print("=== Evaluation Metrics ===")
+    print(f"MSE for Longitude: {mse_lon:.2f}")
+    print(f"MSE for Latitude: {mse_lat:.2f}")
+    print(f"Mean Error: {mean_error:.2f} meters")
+    print(f"Median Error: {median_error:.2f} meters")
+    print(f"Average 2D Error: {average_2d_error:.2f} meters\n")
+
+    # Optionally, display some sample predictions
+    print("=== Sample Predictions ===")
+    sample_size = 5
+    for i in range(sample_size):
+        print(f"Sample {i + 1}:")
+        print(f"  Predicted Longitude: {pred_lon[i]:.2f}, Actual Longitude: {target_val['LONGITUDE'].iloc[i]:.2f}")
+        print(f"  Predicted Latitude: {pred_lat[i]:.2f}, Actual Latitude: {target_val['LATITUDE'].iloc[i]:.2f}")
+        print(f"  Error: {errors[i]:.2f} meters\n")
+
+
+if __name__ == "__main__":
+    main()
