@@ -1,8 +1,12 @@
+import os
+import sys
+import json
 import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_squared_error
 import optuna
-import sys
+import matplotlib.pyplot as plt
+import datetime  # 新增导入用于生成时间戳
 
 # 尝试导入cuML的SVR以支持CUDA加速
 try:
@@ -19,9 +23,57 @@ except ImportError:
 
 
 def main():
+
+    # 固定训练次数
+    train_times = 200  # 训练次数
+
     print("=== 使用SVR和Optuna进行室内定位预测 ===\n")
 
-    # 加载数据
+    # 生成时间戳
+    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    # 创建输出目录
+    output_dir = os.path.join('results', 'SVR', timestamp)
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 初始化跟踪变量
+    best_error = [float('inf')]  # 使用列表以便在嵌套函数中可变
+    image_counter = [1]  # 从1开始计数
+
+    # 定义保存结果为图片的函数
+    def save_result_image(params, metrics, output_dir, filename):
+        # 创建一个无坐标轴的图形
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.axis('off')  # 隐藏坐标轴
+
+        # 准备文本内容（英文）
+        text = "Training Parameters:\n"
+        for param, value in params.items():
+            text += f"  {param}: {value}\n"
+
+        text += "\nEvaluation Metrics:\n"
+        for metric, value in metrics.items():
+            text += f"  {metric}: {value}\n"
+
+        # 设置字体为Times New Roman
+        plt.rcParams['font.family'] = 'Times New Roman'
+
+        # 将文本添加到图形中
+        ax.text(0.01, 0.99, text, transform=ax.transAxes, fontsize=12,
+                verticalalignment='top', wrap=True)
+
+        # 保存图形到文件
+        plt.savefig(os.path.join(output_dir, filename), bbox_inches='tight')
+        plt.close(fig)
+
+    # 定义保存结果为JSON的函数
+    def save_result_json(params, metrics, output_dir, filename):
+        data = {
+            'Training Parameters': params,
+            'Evaluation Metrics': metrics
+        }
+        with open(os.path.join(output_dir, filename), 'w') as f:
+            json.dump(data, f, indent=4)
+
     print("加载训练和验证数据...")
     try:
         train_data = pd.read_csv('UJIndoorLoc/trainingData.csv')  # 更新文件路径以包含所有建筑物
@@ -129,13 +181,53 @@ def main():
 
         print(f"第 {trial.number + 1} 次试验结果: 平均误差 = {mean_error:.2f} 米, 中位误差 = {median_error:.2f} 米\n")
 
+        # 计算MSE和平均2D误差
+        mse_lon = mean_squared_error(target_lon_cpu, pred_lon_cpu)
+        mse_lat = mean_squared_error(target_lat_cpu, pred_lat_cpu)
+        average_2d_error = np.mean(np.sqrt((pred_lon_cpu - target_lon_cpu) ** 2 + (pred_lat_cpu - target_lat_cpu) ** 2))
+
+        # 准备保存的数据（英文）
+        metrics = {
+            'Mean Squared Error Longitude (MSE)': mse_lon,
+            'Mean Squared Error Latitude (MSE)': mse_lat,
+            'Mean Error (meters)': mean_error,
+            'Median Error (meters)': median_error,
+            'Average 2D Error (meters)': average_2d_error
+        }
+
+        params = {
+            'kernel': svr_kernel,
+            'C': svr_C,
+            'epsilon': svr_epsilon,
+            'gamma': svr_gamma
+        }
+
+        if svr_kernel == 'poly':
+            params['degree'] = svr_degree
+            params['coef0'] = svr_coef0
+
+        # 检查当前试验是否为最佳
+        if mean_error < best_error[0]:
+            best_error[0] = mean_error
+            # 保存为'0000.png'
+            save_result_image(params, metrics, output_dir, '0000.png')
+            # 保存为'0000.json'
+            save_result_json(params, metrics, output_dir, '0000.json')
+            print("找到更好的模型，将结果保存为 '0000.png' 和 '0000.json'。\n")
+        else:
+            # 按照顺序保存图片
+            filename = f"{image_counter[0]:04d}.png"
+            save_result_image(params, metrics, output_dir, filename)
+            print(f"将结果保存为 '{filename}'。\n")
+            image_counter[0] += 1
+
         # 将平均误差作为目标函数值进行最小化
         return mean_error
 
     # 开始超参数优化
     print("开始使用Optuna进行超参数优化...")
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=50, show_progress_bar=True)
+    study.optimize(objective, n_trials=train_times, show_progress_bar=True)
     print("超参数优化完成。\n")
 
     # 获取最佳超参数
@@ -156,7 +248,7 @@ def main():
         best_svr_coef0 = best_params['svr_coef0']
     else:
         best_svr_degree = 3  # 默认值
-        best_svr_coef0 = 0.0  # 默认值
+        best_svr_coef0 = 0.0  # 默认coef0
 
     # 根据最佳超参数初始化SVR模型的参数字典
     svr_kwargs = {
@@ -218,6 +310,15 @@ def main():
 
     print("误差指标计算完成。\n")
 
+    # 准备最终保存的数据（英文）
+    final_metrics = {
+        'Mean Squared Error Longitude (MSE)': mse_lon,
+        'Mean Squared Error Latitude (MSE)': mse_lat,
+        'Mean Error (meters)': mean_error,
+        'Median Error (meters)': median_error,
+        'Average 2D Error (meters)': average_2d_error
+    }
+
     # 打印评估结果
     print("=== 评估指标 ===")
     print(f"经度的均方误差 (MSE): {mse_lon:.2f}")
@@ -234,6 +335,35 @@ def main():
         print(f"  预测经度: {pred_lon_cpu[i]:.2f}, 实际经度: {target_lon_cpu[i]:.2f}")
         print(f"  预测纬度: {pred_lat_cpu[i]:.2f}, 实际纬度: {target_lat_cpu[i]:.2f}")
         print(f"  误差: {errors[i]:.2f} 米\n")
+
+    # 准备最终模型的参数（英文）
+    final_params = {
+        'kernel': best_svr_kernel,
+        'C': best_svr_C,
+        'epsilon': best_svr_epsilon,
+        'gamma': best_svr_gamma
+    }
+
+    if best_svr_kernel == 'poly':
+        final_params['degree'] = best_svr_degree
+        final_params['coef0'] = best_svr_coef0
+
+    # 检查最终模型是否为最佳模型
+    if mean_error < best_error[0]:
+        best_error[0] = mean_error
+        # 保存为'0000.png'
+        save_result_image(final_params, final_metrics, output_dir, '0000.png')
+        # 保存为'0000.json'
+        save_result_json(final_params, final_metrics, output_dir, '0000.json')
+        print("最终模型为最佳模型，将结果保存为 '0000.png' 和 '0000.json'。\n")
+    else:
+        # 按照顺序保存图片
+        filename = f"{image_counter[0]:04d}.png"
+        save_result_image(final_params, final_metrics, output_dir, filename)
+        print(f"将最终模型结果保存为 '{filename}'。\n")
+        image_counter[0] += 1
+
+    print("所有任务已成功完成。")
 
 
 if __name__ == "__main__":
