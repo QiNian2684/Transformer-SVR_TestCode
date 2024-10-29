@@ -1,191 +1,263 @@
-import pandas as pd
-import numpy as np
-from sklearn.svm import SVR
-from sklearn.metrics import mean_squared_error
-import optuna
+# hyperparameter_tuning_regression.py
 
+import os
+import torch
+import numpy as np
+from data_preprocessing import load_and_preprocess_data
+from model_definition import WiFiTransformerAutoencoder
+from training_and_evaluation import (
+    train_autoencoder,
+    extract_features,
+    train_and_evaluate_regression_model,
+    NaNLossError
+)
+import optuna
+from optuna.exceptions import TrialPruned
+import joblib
+import json
+import random
+from datetime import datetime
+import shutil
+
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 def main():
 
-    # 定义训练次数
-    train_times = 200
+    # 固定训练参数
+    epochs = 200  # 训练轮数
+    n_trials = 500  # Optuna 试验次数，根据计算资源调整
 
-    print("=== 使用SVR和Optuna进行室内定位预测 ===\n")
+    # 设置随机种子以确保可重复性
+    set_seed()
 
-    # 加载数据
-    print("加载训练和验证数据...")
-    train_data = pd.read_csv('UJIndoorLoc/trainingData.csv')  # 更新文件路径以包含所有建筑物
-    validation_data = pd.read_csv('UJIndoorLoc/validationData.csv')  # 更新文件路径以包含所有建筑物
-    print("数据加载成功。\n")
+    # === 参数设置 ===
+    # 设备配置
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"使用设备: {device}")
 
-    # 可选：显示数据集的基本信息
-    print("训练数据形状:", train_data.shape)
-    print("验证数据形状:", validation_data.shape, "\n")
+    # 数据路径
+    train_path = 'UJIndoorLoc/trainingData.csv'
+    test_path = 'UJIndoorLoc/validationData.csv'
 
-    # 分离特征和目标
-    print("分离特征和目标...")
-    # 根据数据集的实际结构调整需要删除的列
-    features_train = train_data.drop(columns=[
-        'LONGITUDE', 'LATITUDE', 'FLOOR', 'BUILDINGID',
-        'SPACEID', 'RELATIVEPOSITION', 'USERID',
-        'PHONEID', 'TIMESTAMP'
-    ])
-    target_train = train_data.loc[:, ['LONGITUDE', 'LATITUDE']]
+    # === 创建结果保存目录 ===
+    results_dir = 'results'
+    regression_results_dir = os.path.join(results_dir, 'regression')
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    current_run_dir = os.path.join(regression_results_dir, timestamp)
+    os.makedirs(current_run_dir, exist_ok=True)
+    print(f"结果将保存到: {current_run_dir}")
 
-    features_val = validation_data.drop(columns=[
-        'LONGITUDE', 'LATITUDE', 'FLOOR', 'BUILDINGID',
-        'SPACEID', 'RELATIVEPOSITION', 'USERID',
-        'PHONEID', 'TIMESTAMP'
-    ])
-    target_val = validation_data.loc[:, ['LONGITUDE', 'LATITUDE']]
-    print("特征和目标分离完成。\n")
+    # === 定义模型保存目录 ===
+    model_dir = 'best_models_pkl'
+    os.makedirs(model_dir, exist_ok=True)  # 创建目录，如果已存在则不操作
 
-    # 定义Optuna的目标函数
+    # === 数据加载与预处理 ===
+    print("加载并预处理数据...")
+    X_train, y_train_coords, _, X_val, y_val_coords, _, X_test, y_test_coords, _, scaler_X, scaler_y, _ = load_and_preprocess_data(train_path, test_path)
+
+    # 初始化图片编号
+    image_index = 1
+
+    # 用于保存最佳模型
+    best_mean_error_distance = float('inf')
+    best_regression_model = None
+
+    # 定义最佳超参数文件路径
+    best_params_path = os.path.join(current_run_dir, 'best_hyperparameters_regression.json')
+
+    # === 定义优化目标函数 ===
     def objective(trial):
-        print(f"--- 开始第 {trial.number + 1} 次试验 ---")
+        nonlocal image_index  # 引入外部变量
+        nonlocal best_mean_error_distance
+        nonlocal best_regression_model
 
-        # 超参数建议
-        svr_kernel = trial.suggest_categorical('svr_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
-        svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
-        svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 1.0)
-        svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
+        try:
+            # Transformer 自编码器超参数
 
-        # 如果核函数是多项式（poly），则选择多项式的度数和coef0参数
-        if svr_kernel == 'poly':
-            svr_degree = trial.suggest_int('svr_degree', 2, 5)  # 多项式的度数
-            svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)  # 多项式核函数中的独立项系数
-        else:
-            svr_degree = 3  # 默认值为3
-            svr_coef0 = 0.0  # 默认coef0为0.0
+            # model_dim: Transformer模型的维度，可选值为[16, 32, 64, 128]。这个参数决定了模型的大小和复杂度。
+            model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
 
-        print(
-            f"第 {trial.number + 1} 次试验参数: kernel={svr_kernel}, C={svr_C:.4f}, epsilon={svr_epsilon:.4f}, gamma={svr_gamma}, degree={svr_degree}, coef0={svr_coef0:.4f}")
+            # num_heads_options: 根据model_dim的可整除性选择的头数选项，保证model_dim可以被num_heads整除。
+            num_heads_options = [h for h in [2, 4, 8, 16] if model_dim % h == 0]
 
-        # 根据核函数类型初始化SVR模型
-        svr_kwargs = {
-            'C': svr_C,
-            'epsilon': svr_epsilon,
-            'kernel': svr_kernel,
-            'gamma': svr_gamma
-        }
+            # 如果没有有效的头数选项，则终止当前试验。
+            if not num_heads_options:
+                raise TrialPruned("model_dim 不可被任何 num_heads 整除。")
 
-        if svr_kernel == 'poly':
-            svr_kwargs['degree'] = svr_degree
-            svr_kwargs['coef0'] = svr_coef0
+            # num_heads: 选择一个有效的头数，这影响到模型的并行处理能力。
+            num_heads = trial.suggest_categorical('num_heads', num_heads_options)
 
-        # 训练SVR模型用于经度
-        svr_lon = SVR(**svr_kwargs)
-        # 训练SVR模型用于纬度
-        svr_lat = SVR(**svr_kwargs)
+            # num_layers: Transformer模型的层数，范围从4到64。层数越多，模型通常越能捕获复杂的特征，但计算成本也越高。
+            num_layers = trial.suggest_int('num_layers', low=4, high=64)
 
-        print("训练SVR模型...")
-        svr_lon.fit(features_train, target_train['LONGITUDE'])
-        svr_lat.fit(features_train, target_train['LATITUDE'])
-        print("模型训练完成。")
+            # dropout: 在模型训练时随机丢弃节点的比例，用以防止过拟合，范围从0.1到0.5。
+            dropout = trial.suggest_float('dropout', 0.1, 0.5)
 
-        # 在验证集上进行预测
-        print("在验证集上进行预测...")
-        pred_lon = svr_lon.predict(features_val)
-        pred_lat = svr_lat.predict(features_val)
-        print("预测完成。")
+            # learning_rate: 学习率，使用对数标度从1e-6到1e-2选择，对模型训练速度和效果有重要影响。
+            learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-2, log=True)
 
-        # 计算误差
-        errors = np.sqrt((pred_lon - target_val['LONGITUDE']) ** 2 + (pred_lat - target_val['LATITUDE']) ** 2)
-        mean_error = np.mean(errors)
-        median_error = np.median(errors)
+            # batch_size: 批大小，可选值为[64, 128, 256, 512]，影响模型的内存需求和训练速度。
+            batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512])
 
-        print(f"第 {trial.number + 1} 次试验结果: 平均误差 = {mean_error:.2f} 米, 中位误差 = {median_error:.2f} 米\n")
+            # patience: 早停机制的耐心值，当验证损失在连续多个epoch内未改善时停止训练，范围从5到10。
+            patience = trial.suggest_int('early_stopping_patience', 5, 10)
 
-        # 将平均误差作为目标函数值进行最小化
-        return mean_error
+            # SVR 超参数
 
-    # 开始超参数优化
-    print("开始使用Optuna进行超参数优化...")
+            # svr_kernel: SVR模型的核函数类型，可选['linear', 'poly', 'rbf', 'sigmoid']，影响模型处理数据的方式。
+            svr_kernel = trial.suggest_categorical('svr_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+
+            # svr_C: 正则化参数C，使用对数标度从0.1到100选择，C值越大，模型越复杂，容错率越低。
+            svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
+
+            # svr_epsilon: SVR模型的epsilon，定义了不惩罚预测误差在此值内的观测，范围从0.01到1.0。
+            svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 1.0)
+
+            # svr_gamma: SVR核函数的gamma参数，可选['scale', 'auto']，影响核函数的形状和数据的映射。
+            svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
+
+            # 如果核函数是多项式（poly），则需要选择多项式的度数和coef0参数。
+            if svr_kernel == 'poly':
+                svr_degree = trial.suggest_int('svr_degree', 2, 5)  # 多项式的度数
+                svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)  # 多项式核函数中的独立项系数
+            else:
+                svr_degree = 3  # 默认值为3
+                svr_coef0 = 0.0  # 默认coef0为0.0
+
+            # 收集当前超参数组合
+            current_params = {
+                'model_dim': model_dim,
+                'num_heads': num_heads,
+                'num_layers': num_layers,
+                'dropout': dropout,
+                'learning_rate': learning_rate,
+                'batch_size': batch_size,
+                'early_stopping_patience': patience,
+                'svr_kernel': svr_kernel,
+                'svr_C': svr_C,
+                'svr_epsilon': svr_epsilon,
+                'svr_gamma': svr_gamma,
+                'svr_degree': svr_degree,
+                'svr_coef0': svr_coef0,
+            }
+
+            # 打印当前超参数组合
+            print(f"\n当前超参数组合:\n{json.dumps(current_params, indent=4, ensure_ascii=False)}")
+
+            # 初始化 Transformer 自编码器模型
+            model = WiFiTransformerAutoencoder(
+                model_dim=model_dim,
+                num_heads=num_heads,
+                num_layers=num_layers,
+                dropout=dropout
+            ).to(device)
+
+            # 训练自编码器
+            model, train_loss_list, val_loss_list = train_autoencoder(
+                model, X_train, X_val,
+                device=device,
+                epochs=epochs,
+                batch_size=batch_size,
+                learning_rate=learning_rate,
+                early_stopping_patience=patience
+            )
+
+            # 提取特征
+            X_train_features = extract_features(model, X_train, device=device, batch_size=batch_size)
+            X_test_features = extract_features(model, X_test, device=device, batch_size=batch_size)
+
+            # 检查提取的特征中是否存在 NaN
+            if np.isnan(X_train_features).any() or np.isnan(X_test_features).any():
+                print("提取的特征中包含 NaN，试验将被剪枝。")
+                raise TrialPruned()
+
+            # 逆标准化坐标目标变量
+            y_train_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_train_coords[:, 0].reshape(-1, 1))
+            y_train_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_train_coords[:, 1].reshape(-1, 1))
+            y_train_coords_original = np.hstack((y_train_longitude_original, y_train_latitude_original))
+
+            y_test_longitude_original = scaler_y['scaler_y_longitude'].inverse_transform(y_test_coords[:, 0].reshape(-1, 1))
+            y_test_latitude_original = scaler_y['scaler_y_latitude'].inverse_transform(y_test_coords[:, 1].reshape(-1, 1))
+            y_test_coords_original = np.hstack((y_test_longitude_original, y_test_latitude_original))
+
+            # 定义 SVR 参数
+            svr_params = {
+                'kernel': svr_kernel,
+                'C': svr_C,
+                'epsilon': svr_epsilon,
+                'gamma': svr_gamma,
+                'degree': svr_degree,
+                'coef0': svr_coef0,
+            }
+
+            # 训练并评估回归模型，包含可视化和打印输出
+            regression_model, mean_error_distance = train_and_evaluate_regression_model(
+                X_train_features, y_train_coords_original,
+                X_test_features, y_test_coords_original,
+                svr_params=svr_params,
+                training_params=current_params,
+                train_loss_list=train_loss_list,
+                val_loss_list=val_loss_list,
+                output_dir=current_run_dir,
+                image_index=trial.number + 1  # 使用 trial.number + 1 作为图片编号
+            )
+
+            # 如果当前模型表现更好，保存模型和超参数
+            if mean_error_distance < best_mean_error_distance:
+                best_mean_error_distance = mean_error_distance
+                best_regression_model = regression_model
+                # 保存最佳模型
+                best_model_path = os.path.join(model_dir, 'best_regression_model.pkl')
+                joblib.dump(best_regression_model, best_model_path)
+                print(f"最佳回归模型已保存到 {best_model_path}。")
+                # 保存最佳超参数
+                with open(best_params_path, 'w', encoding='utf-8') as f:
+                    json.dump(current_params, f, indent=4, ensure_ascii=False)
+                print(f"最佳超参数已保存到 {best_params_path}。")
+
+            # 返回平均误差距离作为优化目标
+            return mean_error_distance
+
+        except NaNLossError:
+            raise TrialPruned()
+        except ValueError as e:
+            if 'NaN' in str(e):
+                raise TrialPruned()
+            else:
+                raise e
+
+    # === 创建并运行优化研究 ===
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=train_times, show_progress_bar=True)
-    print("超参数优化完成。\n")
+    study.optimize(objective, n_trials=n_trials, n_jobs=1)
 
-    # 获取最佳超参数
-    best_params = study.best_params
-    print("找到的最佳超参数:")
-    for param, value in best_params.items():
-        print(f"  {param}: {value}")
-    print()
+    # === 打印并保存最佳结果 ===
+    print("\n=== 最佳参数 ===")
+    best_trial = study.best_trial
+    print(f"平均误差距离: {best_trial.value:.2f} 米")
+    print("最佳超参数:")
+    print(json.dumps(best_trial.params, indent=4, ensure_ascii=False))
 
-    # 提取最佳超参数
-    best_svr_kernel = best_params['svr_kernel']
-    best_svr_C = best_params['svr_C']
-    best_svr_epsilon = best_params['svr_epsilon']
-    best_svr_gamma = best_params['svr_gamma']
+    # 已在训练过程中实时保存最佳超参数，因此这里无需再次保存
 
-    if best_svr_kernel == 'poly':
-        best_svr_degree = best_params['svr_degree']
-        best_svr_coef0 = best_params['svr_coef0']
-    else:
-        best_svr_degree = 3  # 默认值
-        best_svr_coef0 = 0.0  # 默认值
+    # === 保存最佳试验的结果图片为“0000.png” ===
+    try:
+        best_trial_number = best_trial.number
+        best_image_index = best_trial_number + 1  # 与保存图片时的编号对应
+        best_image_name = f"{best_image_index:04d}_regression.png"
+        best_image_path = os.path.join(current_run_dir, best_image_name)
+        destination_image_path = os.path.join(current_run_dir, "0000.png")
+        # 复制最佳试验的图片并重命名为“0000.png”
+        shutil.copyfile(best_image_path, destination_image_path)
+        print(f"最佳试验的结果图片已保存为 {destination_image_path}")
+    except Exception as e:
+        print(f"无法保存最佳试验的图片：{e}")
 
-    # 根据最佳超参数初始化SVR模型
-    svr_kwargs = {
-        'C': best_svr_C,
-        'epsilon': best_svr_epsilon,
-        'kernel': best_svr_kernel,
-        'gamma': best_svr_gamma
-    }
+    # 不再需要复制最佳模型，因为已经在 objective 中保存了最佳模型
 
-    if best_svr_kernel == 'poly':
-        svr_kwargs['degree'] = best_svr_degree
-        svr_kwargs['coef0'] = best_svr_coef0
-
-    print("使用最佳超参数训练最终模型...")
-    svr_lon = SVR(**svr_kwargs)
-    svr_lat = SVR(**svr_kwargs)
-
-    svr_lon.fit(features_train, target_train['LONGITUDE'])
-    svr_lat.fit(features_train, target_train['LATITUDE'])
-    print("最终模型训练完成。\n")
-
-    # 在验证集上进行最终预测
-    print("在验证集上进行最终预测...")
-    pred_lon = svr_lon.predict(features_val)
-    pred_lat = svr_lat.predict(features_val)
-    print("最终预测完成。\n")
-
-    # 计算误差指标
-    print("计算误差指标...")
-    errors = np.sqrt((pred_lon - target_val['LONGITUDE']) ** 2 + (pred_lat - target_val['LATITUDE']) ** 2)
-    mean_error = np.mean(errors)
-    median_error = np.median(errors)
-
-    # 计算MSE
-    mse_lon = mean_squared_error(target_val['LONGITUDE'], pred_lon)
-    mse_lat = mean_squared_error(target_val['LATITUDE'], pred_lat)
-
-    # 计算平均2D误差
-    predictions = np.vstack((pred_lon, pred_lat)).T
-    actuals = target_val[['LONGITUDE', 'LATITUDE']].values
-    differences = np.sqrt(np.sum((predictions - actuals) ** 2, axis=1))
-    average_2d_error = np.mean(differences)
-
-    print("误差指标计算完成。\n")
-
-    # 打印评估结果
-    print("=== 评估指标 ===")
-    print(f"经度的均方误差 (MSE): {mse_lon:.2f}")
-    print(f"纬度的均方误差 (MSE): {mse_lat:.2f}")
-    print(f"平均误差: {mean_error:.2f} 米")
-    print(f"中位误差: {median_error:.2f} 米")
-    print(f"平均2D误差: {average_2d_error:.2f} 米\n")
-
-    # 可选：显示一些样本预测结果
-    print("=== 样本预测结果 ===")
-    sample_size = 5
-    for i in range(sample_size):
-        print(f"样本 {i + 1}:")
-        print(f"  预测经度: {pred_lon[i]:.2f}, 实际经度: {target_val['LONGITUDE'].iloc[i]:.2f}")
-        print(f"  预测纬度: {pred_lat[i]:.2f}, 实际纬度: {target_val['LATITUDE'].iloc[i]:.2f}")
-        print(f"  误差: {errors[i]:.2f} 米\n")
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
