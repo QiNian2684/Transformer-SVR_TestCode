@@ -30,7 +30,7 @@ def main():
 
     # 固定训练参数
     epochs = 2  # 训练轮数
-    n_trials = 400  # Optuna 试验次数，根据计算资源调整
+    n_trials = 3  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
     set_seed()
@@ -56,12 +56,12 @@ def main():
     model_dir = 'best_models_pkl'
     os.makedirs(model_dir, exist_ok=True)  # 创建目录，如果已存在则不操作
 
+    # 定义 CSV 文件路径，将其保存在 current_run_dir
+    csv_file_path_classification = os.path.join(current_run_dir, 'classification_results.csv')
+
     # === 数据加载与预处理 ===
     print("加载并预处理数据...")
     X_train, _, y_train_floor, X_val, _, y_val_floor, X_test, _, y_test_floor, scaler_X, _, label_encoder = load_and_preprocess_data(train_path, test_path)
-
-    # 初始化图片编号
-    image_index = 1
 
     # 用于保存最佳模型
     best_accuracy = 0
@@ -72,7 +72,6 @@ def main():
 
     # === 定义优化目标函数 ===
     def objective(trial):
-        nonlocal image_index  # 引入外部变量
         nonlocal best_accuracy
         nonlocal best_classification_model
 
@@ -203,7 +202,8 @@ def main():
                 val_loss_list=val_loss_list,
                 label_encoder=label_encoder,
                 output_dir=current_run_dir,
-                image_index=trial.number + 1  # 使用 trial.number + 1 作为图片编号
+                image_index=trial.number + 1,  # 使用 trial.number + 1 作为图片编号
+                csv_file_path=csv_file_path_classification  # 添加此行，指定CSV文件路径
             )
 
             # 如果当前模型表现更好，保存模型和超参数
@@ -219,7 +219,6 @@ def main():
                     json.dump(current_params, f, indent=4, ensure_ascii=False)
                 print(f"最佳超参数已保存到 {best_params_path}。")
 
-            # 返回准确率作为优化目标
             return accuracy
 
         except NaNLossError:
@@ -255,8 +254,6 @@ def main():
         print(f"最佳试验的结果图片已保存为 {destination_image_path}")
     except Exception as e:
         print(f"无法保存最佳试验的图片：{e}")
-
-    # 不再需要复制最佳模型，因为已经在 objective 中保存了最佳模型
 
 if __name__ == '__main__':
     main()

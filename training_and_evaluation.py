@@ -1,13 +1,13 @@
 # training_and_evaluation.py
 
 import os
+import csv
 import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, accuracy_score, classification_report
 from sklearn.svm import SVR, SVC
 from sklearn.multioutput import MultiOutputRegressor
-import joblib
 import matplotlib.pyplot as plt
 
 # 设置可视化字体为 Times New Roman
@@ -15,9 +15,6 @@ plt.rcParams['font.family'] = 'Times New Roman'
 
 # 定义每层的高度（单位：米）
 FLOOR_HEIGHT = 3  # 您可以根据需要调整此值
-
-# 定义模型保存目录
-# model_dir = 'saved_models'  # 已不再需要在此脚本中保存模型
 
 class NaNLossError(Exception):
     """自定义异常，当训练过程中出现 NaN 损失时抛出。"""
@@ -37,6 +34,27 @@ def compute_error_distances(y_true, y_pred):
     # 计算水平距离（X 和 Y 坐标）
     distances = np.linalg.norm(y_true - y_pred, axis=1)
     return distances
+
+def write_csv_row(csv_file_path, fieldnames, row_data):
+    """
+    写入一行数据到 CSV 文件，如果文件不存在则创建并写入表头。
+
+    参数：
+    - csv_file_path: CSV 文件路径
+    - fieldnames: 表头列表
+    - row_data: 字典形式的一行数据
+    """
+    # 检查 CSV 文件是否存在，如果不存在则创建并写入表头
+    file_exists = os.path.exists(csv_file_path)
+    if not file_exists:
+        with open(csv_file_path, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+    # 写入一行结果
+    with open(csv_file_path, 'a', newline='', encoding='utf-8') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writerow(row_data)
 
 def train_autoencoder(model, X_train, X_val, device, epochs=50, batch_size=256, learning_rate=2e-4, early_stopping_patience=5):
     """
@@ -178,7 +196,7 @@ def extract_features(model, X_data, device, batch_size=256):
 def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test_features, y_test_coords,
                                         svr_params=None, training_params=None,
                                         train_loss_list=None, val_loss_list=None,
-                                        output_dir=None, image_index=1):
+                                        output_dir=None, image_index=1, csv_file_path=None):
     """
     训练并评估回归模型，包括可视化和打印输出。
 
@@ -193,6 +211,7 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
     - val_loss_list: 每个 epoch 的验证损失列表（可选，自编码器的损失）
     - output_dir: 保存结果图片的目录（可选）
     - image_index: 图片编号，默认从1开始
+    - csv_file_path: 记录结果的 CSV 文件路径（可选）
 
     返回：
     - regression_model: 训练好的回归模型
@@ -237,8 +256,6 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
         print(f"R^2 Score: {r2:.6f}")
         print(f"平均误差距离（米）: {mean_error_distance:.2f}")
         print(f"中位数误差距离（米）: {median_error_distance:.2f}")
-
-        # 不再保存回归模型
 
         # 生成可视化图表
         fig = plt.figure(figsize=(14, 10), constrained_layout=True)
@@ -303,8 +320,38 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
             ax3.text(0.5, 0.5, 'No loss data available', fontsize=16, ha='center', va='center')
             ax3.axis('off')
 
+        # 将模型参数和结果写入 CSV 文件
+        if csv_file_path is not None:
+            # 展开参数字典为单独的列
+            row_data = {
+                'Image_Index': f"{image_index:04d}",
+                'MSE': mse,
+                'MAE': mae,
+                'R2_Score': r2,
+                'Mean_Error_Distance': mean_error_distance,
+                'Median_Error_Distance': median_error_distance
+            }
+
+            # 添加 svr_params
+            if svr_params is not None:
+                for key, value in svr_params.items():
+                    row_data[f'svr_{key}'] = value
+
+            # 添加 training_params
+            if training_params is not None:
+                for key, value in training_params.items():
+                    row_data[key] = value
+
+            # 构建字段名列表
+            fieldnames = list(row_data.keys())
+
+            write_csv_row(csv_file_path, fieldnames, row_data)
+            print(f"结果已记录到 CSV 文件: {csv_file_path}")
+
         # 保存图片
         if output_dir is not None:
+            # 确保输出目录存在
+            os.makedirs(output_dir, exist_ok=True)
             # 修改这里，确保图片编号为四位数
             image_path = os.path.join(output_dir, f"{image_index:04d}_regression.png")
             plt.savefig(image_path)
@@ -325,7 +372,7 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
 def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_test_features, y_test_floor,
                                             svc_params=None, training_params=None,
                                             train_loss_list=None, val_loss_list=None, label_encoder=None,
-                                            output_dir=None, image_index=1):
+                                            output_dir=None, image_index=1, csv_file_path=None):
     """
     训练并评估分类模型，包括可视化和打印输出。
 
@@ -341,6 +388,7 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
     - label_encoder: 标签编码器，用于解码楼层标签
     - output_dir: 保存结果图片的目录（可选）
     - image_index: 图片编号，默认从1开始
+    - csv_file_path: 记录结果的 CSV 文件路径（可选）
 
     返回：
     - classification_model: 训练好的分类模型
@@ -379,8 +427,6 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
         print("分类报告：")
         print(class_report)
 
-        # 不再保存分类模型
-
         # 生成可视化图表
         fig = plt.figure(figsize=(14, 10), constrained_layout=True)
         gs = fig.add_gridspec(2, 2)
@@ -409,8 +455,8 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
                     if i + j < len(params_items):
                         key, value = params_items[i + j]
                         line += f"{key}: {value}    "
-                params_lines.append(line.strip())
-            params_text += '\n'.join(params_lines)
+                    params_lines.append(line.strip())
+                params_text += '\n'.join(params_lines)
 
         # 格式化评估指标为文本
         metrics_text = (
@@ -441,8 +487,35 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
             ax3.text(0.5, 0.5, 'No loss data available', fontsize=16, ha='center', va='center')
             ax3.axis('off')
 
+        # 将模型参数和结果写入 CSV 文件
+        if csv_file_path is not None:
+            # 展开参数字典为单独的列
+            row_data = {
+                'Image_Index': f"{image_index:04d}",
+                'Accuracy': accuracy,
+                'Missing_Classes': str(missing_classes) if missing_classes else 'None'
+            }
+
+            # 添加 svc_params
+            if svc_params is not None:
+                for key, value in svc_params.items():
+                    row_data[f'svc_{key}'] = value
+
+            # 添加 training_params
+            if training_params is not None:
+                for key, value in training_params.items():
+                    row_data[key] = value
+
+            # 构建字段名列表
+            fieldnames = list(row_data.keys())
+
+            write_csv_row(csv_file_path, fieldnames, row_data)
+            print(f"结果已记录到 CSV 文件: {csv_file_path}")
+
         # 保存图片
         if output_dir is not None:
+            # 确保输出目录存在
+            os.makedirs(output_dir, exist_ok=True)
             # 修改这里，确保图片编号为四位数
             image_path = os.path.join(output_dir, f"{image_index:04d}_classification.png")
             plt.savefig(image_path)
@@ -459,3 +532,4 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
             raise ValueError("训练失败，输入数据中包含 NaN。")
         else:
             raise e
+
