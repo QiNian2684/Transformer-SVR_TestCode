@@ -427,6 +427,29 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
         print("分类报告：")
         print(class_report)
 
+        # 定义所有可能的楼层标签（根据您的数据集调整）
+        all_possible_floors = [0, 1, 2, 3, 4]  # 假设楼层标签为 0 到 4
+
+        # 计算每层楼的分类准确率
+        per_floor_accuracies = {}
+        for floor in all_possible_floors:
+            indices = (y_test_floor == floor)
+            if np.sum(indices) > 0:
+                # 测试集中有该楼层的样本
+                floor_accuracy = accuracy_score(y_test_floor[indices], y_pred_floor[indices])
+                per_floor_accuracies[floor] = floor_accuracy
+            else:
+                # 测试集中没有该楼层的样本，标记为 -1
+                per_floor_accuracies[floor] = -1
+
+        print("每层楼的分类准确率：")
+        for floor in sorted(per_floor_accuracies.keys()):
+            acc = per_floor_accuracies[floor]
+            if acc != -1:
+                print(f"Floor {floor}: Accuracy {acc:.4f}")
+            else:
+                print(f"Floor {floor}: -1")
+
         # 生成可视化图表
         fig = plt.figure(figsize=(14, 10), constrained_layout=True)
         gs = fig.add_gridspec(2, 2)
@@ -455,8 +478,8 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
                     if i + j < len(params_items):
                         key, value = params_items[i + j]
                         line += f"{key}: {value}    "
-                    params_lines.append(line.strip())
-                params_text += '\n'.join(params_lines)
+                params_lines.append(line.strip())
+            params_text += '\n'.join(params_lines)
 
         # 格式化评估指标为文本
         metrics_text = (
@@ -466,6 +489,15 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
 
         if missing_classes:
             metrics_text += f"Missing Classes: {missing_classes}\n"
+
+        # 添加每层楼的分类准确率
+        metrics_text += "\nPer-floor Accuracies:\n"
+        for floor in sorted(per_floor_accuracies.keys()):
+            acc = per_floor_accuracies[floor]
+            if acc != -1:
+                metrics_text += f"Floor {floor}: {acc:.4f}\n"
+            else:
+                metrics_text += f"Floor {floor}: -1\n"
 
         # 将训练参数和评估指标合并
         combined_text = params_text + "\n\n" + metrics_text
@@ -495,6 +527,10 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
                 'Accuracy': accuracy,
                 'Missing_Classes': str(missing_classes) if missing_classes else 'None'
             }
+
+            # 添加每层楼的分类准确率到 row_data
+            for floor, acc in per_floor_accuracies.items():
+                row_data[f'Accuracy_Floor_{floor}'] = acc
 
             # 添加 svc_params
             if svc_params is not None:
@@ -532,4 +568,3 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
             raise ValueError("训练失败，输入数据中包含 NaN。")
         else:
             raise e
-
