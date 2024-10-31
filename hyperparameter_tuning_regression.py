@@ -29,8 +29,8 @@ def set_seed(seed=42):
 def main():
 
     # 固定训练参数
-    epochs = 200  # 训练轮数
-    n_trials = 450  # Optuna 试验次数，根据计算资源调整
+    epochs = 2  # 训练轮数
+    n_trials = 2  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
     set_seed()
@@ -207,7 +207,7 @@ def main():
                 csv_file_path=csv_file_path_regression  # 添加此行，指定CSV文件路径
             )
 
-            # 如果当前模型表现更好，保存模型和超参数
+            # 如果当前模型表现更好，保存模型和超参数，并更新最佳图片
             if mean_error_distance < best_mean_error_distance:
                 best_mean_error_distance = mean_error_distance
                 best_regression_model = regression_model
@@ -219,6 +219,17 @@ def main():
                 with open(best_params_path, 'w', encoding='utf-8') as f:
                     json.dump(current_params, f, indent=4, ensure_ascii=False)
                 print(f"最佳超参数已保存到 {best_params_path}。")
+                # 更新最佳试验的结果图片为“0000.png”
+                try:
+                    best_image_index = trial.number + 1  # 与保存图片时的编号对应
+                    best_image_name = f"{best_image_index:04d}_regression.png"
+                    best_image_path = os.path.join(current_run_dir, best_image_name)
+                    destination_image_path = os.path.join(current_run_dir, "0000.png")
+                    # 复制最佳试验的图片并重命名为“0000.png”
+                    shutil.copyfile(best_image_path, destination_image_path)
+                    print(f"最佳试验的结果图片已更新为 {destination_image_path}")
+                except Exception as e:
+                    print(f"无法更新最佳试验的图片：{e}")
 
             # 返回平均误差距离作为优化目标
             return mean_error_distance
@@ -242,20 +253,7 @@ def main():
     print("最佳超参数:")
     print(json.dumps(best_trial.params, indent=4, ensure_ascii=False))
 
-    # 已在训练过程中实时保存最佳超参数，因此这里无需再次保存
-
-    # === 保存最佳试验的结果图片为“0000.png” ===
-    try:
-        best_trial_number = best_trial.number
-        best_image_index = best_trial_number + 1  # 与保存图片时的编号对应
-        best_image_name = f"{best_image_index:04d}_regression.png"
-        best_image_path = os.path.join(current_run_dir, best_image_name)
-        destination_image_path = os.path.join(current_run_dir, "0000.png")
-        # 复制最佳试验的图片并重命名为“0000.png”
-        shutil.copyfile(best_image_path, destination_image_path)
-        print(f"最佳试验的结果图片已保存为 {destination_image_path}")
-    except Exception as e:
-        print(f"无法保存最佳试验的图片：{e}")
+    # 已在每次试验中实时保存最佳模型、超参数和图片，因此这里无需再次保存
 
 if __name__ == '__main__':
     main()

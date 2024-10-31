@@ -29,8 +29,8 @@ def set_seed(seed=42):
 def main():
 
     # 固定训练参数
-    epochs = 200  # 训练轮数
-    n_trials = 450  # Optuna 试验次数，根据计算资源调整
+    epochs = 2  # 训练轮数
+    n_trials = 2  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
     set_seed()
@@ -78,59 +78,51 @@ def main():
         try:
             # Transformer 自编码器超参数
 
-            # model_dim: 模型维度，决定了嵌入空间的大小，以及随后各层的大小。这是一个分类参数，可选择的值有16, 32, 64, 128。
-            # 不同的维度大小会直接影响模型的复杂性和计算负载。
+            # model_dim: 模型维度，决定了嵌入空间的大小，以及随后各层的大小。
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
 
-            # num_heads_options: 生成一个列表，包含可以整除model_dim的头数选项。这是为了确保在多头注意力中每个头可以平均分配维度。
-            # 选择的头数会影响模型对不同信息部分的关注能力和并行处理能力。
+            # num_heads_options: 生成一个列表，包含可以整除model_dim的头数选项。
             num_heads_options = [h for h in [2, 4, 8, 16] if model_dim % h == 0]
 
             # 如果没有有效的头数选项，中止这次试验。
             if not num_heads_options:
                 raise TrialPruned("model_dim 不可被任何 num_heads 整除。")
 
-            # num_heads: 注意力机制中的头数，需要从上面计算的有效选项中选择。
-            # 头数的选择影响模型的注意力分布和参数数量。
+            # num_heads: 注意力机制中的头数。
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
 
-            # num_layers: Transformer模型中的层数。层数越多，模型可以学习的抽象层次越高，但计算和内存需求也越大。
+            # num_layers: Transformer模型中的层数。
             num_layers = trial.suggest_int('num_layers', low=4, high=64)
 
-            # dropout: 在模型训练时每个元素被随机丢弃的概率，用于防止过拟合。
-            # 较高的dropout值可能导致模型学习不足，而较低的值可能导致过拟合。
+            # dropout: 在模型训练时每个元素被随机丢弃的概率。
             dropout = trial.suggest_float('dropout', 0.1, 0.5)
 
-            # learning_rate: 学习率，控制模型参数在每次迭代时的更新速度。使用对数规模选择，范围从1e-5到1e-2。
-            # 学习率的选择会显著影响模型训练的稳定性和收敛速度。
+            # learning_rate: 学习率。
             learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
 
-            # batch_size: 批量大小，影响模型训练的内存需求和更新频率。
-            # 较大的批量可以提高内存利用率和模型稳定性，但可能影响训练动态和收敛质量。
+            # batch_size: 批量大小。
             batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
 
-            # patience: 早停策略中的耐心值，表示在验证指标不再改善时，训练还会继续的轮数。
-            # 较高的耐心值可以防止由于偶然波动而过早停止训练。
+            # patience: 早停策略中的耐心值。
             patience = trial.suggest_int('early_stopping_patience', 3, 15)
 
             # SVC 超参数
 
-            # svc_C: 支持向量机的正则化参数C。值越大，模型对错误分类的惩罚越重，可能导致过拟合。
-            # 使用对数规模选择，范围从0.1到100。
+            # svc_C: 支持向量机的正则化参数C。
             svc_C = trial.suggest_float('svc_C', 1e-1, 1e2, log=True)
 
-            # svc_kernel: 支持向量机使用的核函数类型。核函数的选择决定了数据在新空间中的映射方式，影响模型的性能和复杂度。
+            # svc_kernel: 支持向量机使用的核函数类型。
             svc_kernel = trial.suggest_categorical('svc_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
 
-            # svc_gamma: 核函数的系数，仅在某些核函数中使用。可以是'auto'或'scale'，其中'scale'依赖于特征数量自动调整。
+            # svc_gamma: 核函数的系数。
             svc_gamma = trial.suggest_categorical('svc_gamma', ['scale', 'auto'])
 
             # 如果选用的是多项式核函数，还需要设置多项式的度数和系数。
             if svc_kernel == 'poly':
-                # svc_degree: 多项式核函数的度数。度数越高，模型可以学习更复杂的决策边界，但计算负载也越大。
+                # svc_degree: 多项式核函数的度数。
                 svc_degree = trial.suggest_int('svc_degree', 2, 5)
 
-                # svc_coef0: 多项式核函数的自由项系数。调整这个参数可以影响核函数的形状和模型的决策边界。
+                # svc_coef0: 多项式核函数的自由项系数。
                 svc_coef0 = trial.suggest_float('svc_coef0', 0.0, 1.0)
             else:
                 # 对于非多项式核，使用默认值。
@@ -206,7 +198,7 @@ def main():
                 csv_file_path=csv_file_path_classification  # 添加此行，指定CSV文件路径
             )
 
-            # 如果当前模型表现更好，保存模型和超参数
+            # 如果当前模型表现更好，保存模型和超参数，并更新最佳图片
             if accuracy > best_accuracy:
                 best_accuracy = accuracy
                 best_classification_model = classification_model
@@ -218,6 +210,17 @@ def main():
                 with open(best_params_path, 'w', encoding='utf-8') as f:
                     json.dump(current_params, f, indent=4, ensure_ascii=False)
                 print(f"最佳超参数已保存到 {best_params_path}。")
+                # 更新最佳试验的结果图片为“0000.png”
+                try:
+                    best_image_index = trial.number + 1  # 与保存图片时的编号对应
+                    best_image_name = f"{best_image_index:04d}_classification.png"
+                    best_image_path = os.path.join(current_run_dir, best_image_name)
+                    destination_image_path = os.path.join(current_run_dir, "0000.png")
+                    # 复制最佳试验的图片并重命名为“0000.png”
+                    shutil.copyfile(best_image_path, destination_image_path)
+                    print(f"最佳试验的结果图片已更新为 {destination_image_path}")
+                except Exception as e:
+                    print(f"无法更新最佳试验的图片：{e}")
 
             return accuracy
 
@@ -240,20 +243,7 @@ def main():
     print("最佳超参数:")
     print(json.dumps(best_trial.params, indent=4, ensure_ascii=False))
 
-    # 已在训练过程中实时保存最佳超参数，因此这里无需再次保存
-
-    # === 保存最佳试验的结果图片为“0000.png” ===
-    try:
-        best_trial_number = best_trial.number
-        best_image_index = best_trial_number + 1  # 与保存图片时的编号对应
-        best_image_name = f"{best_image_index:04d}_classification.png"
-        best_image_path = os.path.join(current_run_dir, best_image_name)
-        destination_image_path = os.path.join(current_run_dir, "0000.png")
-        # 复制最佳试验的图片并重命名为“0000.png”
-        shutil.copyfile(best_image_path, destination_image_path)
-        print(f"最佳试验的结果图片已保存为 {destination_image_path}")
-    except Exception as e:
-        print(f"无法保存最佳试验的图片：{e}")
+    # 已在每次试验中实时保存最佳模型、超参数和图片，因此这里无需再次保存
 
 if __name__ == '__main__':
     main()
