@@ -29,7 +29,7 @@ def set_seed(seed=42):
 def main():
 
     # 固定训练参数
-    epochs = 200  # 训练轮数
+    epochs = 45  # 训练轮数
     n_trials = 500  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
@@ -79,7 +79,7 @@ def main():
             # Transformer 自编码器超参数
 
             # model_dim: 模型维度，决定了嵌入空间的大小，以及随后各层的大小。
-            model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
+            model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128, 256, 512])
 
             # num_heads_options: 生成一个列表，包含可以整除model_dim的头数选项。
             num_heads_options = [h for h in [2, 4, 8, 16] if model_dim % h == 0]
@@ -95,24 +95,24 @@ def main():
             num_layers = trial.suggest_int('num_layers', low=4, high=64)
 
             # dropout: 在模型训练时每个元素被随机丢弃的概率。
-            dropout = trial.suggest_float('dropout', 0.1, 0.5)
+            dropout = trial.suggest_float('dropout', 0.0, 0.5)
 
             # learning_rate: 学习率。
-            learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
+            learning_rate = trial.suggest_float('learning_rate', 0.000001, 0.001, log=True)
 
             # batch_size: 批量大小。
-            batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
+            batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128, 256])
 
             # patience: 早停策略中的耐心值。
-            patience = trial.suggest_int('early_stopping_patience', 3, 15)
+            patience = trial.suggest_int('early_stopping_patience', 3, 7)
 
             # SVC 超参数
 
             # svc_C: 支持向量机的正则化参数C。
-            svc_C = trial.suggest_float('svc_C', 1e-1, 1e2, log=True)
+            svc_C = trial.suggest_float('svc_C', 1e-1, 1e3, log=True)
 
             # svc_kernel: 支持向量机使用的核函数类型。
-            svc_kernel = trial.suggest_categorical('svc_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+            svc_kernel = trial.suggest_categorical('svc_kernel', ['poly', 'rbf', 'sigmoid'])
 
             # svc_gamma: 核函数的系数。
             svc_gamma = trial.suggest_categorical('svc_gamma', ['scale', 'auto'])

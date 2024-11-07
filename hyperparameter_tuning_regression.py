@@ -18,6 +18,7 @@ import json
 import random
 from datetime import datetime
 import shutil
+import pandas as pd
 
 def set_seed(seed=42):
     random.seed(seed)
@@ -29,8 +30,8 @@ def set_seed(seed=42):
 def main():
 
     # 固定训练参数
-    epochs = 200  # 训练轮数
-    n_trials = 500  # Optuna 试验次数，根据计算资源调整
+    epochs = 50  # 训练轮数
+    n_trials = 600  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
     set_seed()
@@ -59,9 +60,15 @@ def main():
     # 定义 CSV 文件路径，将其保存在 current_run_dir
     csv_file_path_regression = os.path.join(current_run_dir, 'regression_results.csv')
 
+    # 定义 error.csv 文件路径
+    error_csv_path = os.path.join(current_run_dir, 'error.csv')
+
     # === 数据加载与预处理 ===
     print("加载并预处理数据...")
     X_train, y_train_coords, _, X_val, y_val_coords, _, X_test, y_test_coords, _, scaler_X, scaler_y, _ = load_and_preprocess_data(train_path, test_path)
+
+    # 保存原始的测试集数据，用于记录到 error.csv
+    test_data = pd.read_csv(test_path)
 
     # 用于保存最佳模型
     best_mean_error_distance = float('inf')
@@ -95,24 +102,24 @@ def main():
             num_layers = trial.suggest_int('num_layers', low=4, high=64)
 
             # dropout: 在模型训练时随机丢弃节点的比例，用以防止过拟合，范围从0.1到0.5。
-            dropout = trial.suggest_float('dropout', 0.1, 0.5)
+            dropout = trial.suggest_float('dropout', 0.0, 0.5)
 
             # learning_rate: 学习率，使用对数标度从1e-6到1e-2选择，对模型训练速度和效果有重要影响。
-            learning_rate = trial.suggest_float('learning_rate', 1e-6, 1e-2, log=True)
+            learning_rate = trial.suggest_float('learning_rate', 0.000001, 0.01, log=True)
 
-            # batch_size: 批大小，可选值为[64, 128, 256, 512]，影响模型的内存需求和训练速度。
-            batch_size = trial.suggest_categorical('batch_size', [64, 128, 256, 512])
+            # batch_size: 批大小，可选值为[16, 32, 48, 64, 128, 256]，影响模型的内存需求和训练速度。
+            batch_size = trial.suggest_categorical('batch_size', [16, 32, 48, 64, 128, 256])
 
-            # patience: 早停机制的耐心值，当验证损失在连续多个epoch内未改善时停止训练，范围从5到10。
-            patience = trial.suggest_int('early_stopping_patience', 5, 10)
+            # patience: 早停机制的耐心值，当验证损失在连续多个epoch内未改善时停止训练，范围从3到7。
+            patience = trial.suggest_int('early_stopping_patience', 3, 7)
 
             # SVR 超参数
 
             # svr_kernel: SVR模型的核函数类型，可选['linear', 'poly', 'rbf', 'sigmoid']，影响模型处理数据的方式。
-            svr_kernel = trial.suggest_categorical('svr_kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+            svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
 
             # svr_C: 正则化参数C，使用对数标度从0.1到100选择，C值越大，模型越复杂，容错率越低。
-            svr_C = trial.suggest_float('svr_C', 1e-1, 1e2, log=True)
+            svr_C = trial.suggest_float('svr_C', 1e-1, 1e3, log=True)
 
             # svr_epsilon: SVR模型的epsilon，定义了不惩罚预测误差在此值内的观测，范围从0.01到1.0。
             svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 1.0)
@@ -195,7 +202,7 @@ def main():
             }
 
             # 训练并评估回归模型，包含可视化和打印输出
-            regression_model, mean_error_distance = train_and_evaluate_regression_model(
+            regression_model, mean_error_distance, error_distances = train_and_evaluate_regression_model(
                 X_train_features, y_train_coords_original,
                 X_test_features, y_test_coords_original,
                 svr_params=svr_params,
@@ -230,6 +237,19 @@ def main():
                     print(f"最佳试验的结果图片已更新为 {destination_image_path}")
                 except Exception as e:
                     print(f"无法更新最佳试验的图片：{e}")
+
+                # 保存误差超过15米的样本到 error.csv
+                error_threshold = 15.0  # 误差阈值（米）
+                indices_high_error = np.where(error_distances > error_threshold)[0]
+                if len(indices_high_error) > 0:
+                    print(f"发现 {len(indices_high_error)} 个误差超过 {error_threshold} 米的样本。")
+                    high_error_data = test_data.iloc[indices_high_error]
+                    high_error_data.to_csv(error_csv_path, index=False)
+                    print(f"高误差样本已保存到 {error_csv_path}")
+                else:
+                    print(f"没有误差超过 {error_threshold} 米的样本。")
+            else:
+                print("当前模型未超过最佳模型，不更新 error.csv。")
 
             # 返回平均误差距离作为优化目标
             return mean_error_distance

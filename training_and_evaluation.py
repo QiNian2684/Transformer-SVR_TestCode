@@ -216,6 +216,7 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
     返回：
     - regression_model: 训练好的回归模型
     - mean_error_distance: 平均误差距离（用于超参数优化）
+    - error_distances: 误差距离数组
     """
     try:
         # 坐标回归模型
@@ -360,7 +361,7 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
         else:
             plt.show()
 
-        return regression_model, mean_error_distance
+        return regression_model, mean_error_distance, error_distances
 
     except ValueError as e:
         if 'NaN' in str(e):
@@ -428,7 +429,7 @@ def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_t
         print(class_report)
 
         # 定义所有可能的楼层标签（根据您的数据集调整）
-        all_possible_floors = [0, 1, 2, 3, 4]  # 假设楼层标签为 0 到 4
+        all_possible_floors = np.unique(np.concatenate((y_train_floor, y_test_floor)))
 
         # 计算每层楼的分类准确率
         per_floor_accuracies = {}
