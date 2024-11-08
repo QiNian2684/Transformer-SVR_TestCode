@@ -9,6 +9,7 @@ from training_and_evaluation import (
     train_autoencoder,
     extract_features,
     train_and_evaluate_regression_model,
+
     NaNLossError
 )
 import optuna
@@ -30,7 +31,7 @@ def set_seed(seed=42):
 def main():
 
     # 固定训练参数
-    epochs = 50  # 训练轮数
+    epochs = 45  # 训练轮数
     n_trials = 600  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
@@ -105,7 +106,7 @@ def main():
             dropout = trial.suggest_float('dropout', 0.0, 0.5)
 
             # learning_rate: 学习率，使用对数标度从1e-6到1e-2选择，对模型训练速度和效果有重要影响。
-            learning_rate = trial.suggest_float('learning_rate', 0.000001, 0.01, log=True)
+            learning_rate = trial.suggest_float('learning_rate', 0.0005, 0.01, log=True)
 
             # batch_size: 批大小，可选值为[16, 32, 48, 64, 128, 256]，影响模型的内存需求和训练速度。
             batch_size = trial.suggest_categorical('batch_size', [16, 32, 48, 64, 128, 256])
@@ -118,11 +119,11 @@ def main():
             # svr_kernel: SVR模型的核函数类型，可选['linear', 'poly', 'rbf', 'sigmoid']，影响模型处理数据的方式。
             svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
 
-            # svr_C: 正则化参数C，使用对数标度从0.1到100选择，C值越大，模型越复杂，容错率越低。
-            svr_C = trial.suggest_float('svr_C', 1e-1, 1e3, log=True)
+            # svr_C: 正则化参数C，使用对数标度从1到200选择，C值越大，模型越复杂，容错率越低。
+            svr_C = trial.suggest_float('svr_C', 1, 200, log=True)
 
-            # svr_epsilon: SVR模型的epsilon，定义了不惩罚预测误差在此值内的观测，范围从0.01到1.0。
-            svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 1.0)
+            # svr_epsilon: SVR模型的epsilon，定义了不惩罚预测误差在此值内的观测，范围从0.01到3.0。
+            svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 3.0)
 
             # svr_gamma: SVR核函数的gamma参数，可选['scale', 'auto']，影响核函数的形状和数据的映射。
             svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
