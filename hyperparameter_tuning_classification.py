@@ -29,7 +29,7 @@ def set_seed(seed=42):
 def main():
 
     # 固定训练参数
-    epochs = 45  # 训练轮数
+    epochs = 35  # 训练轮数
     n_trials = 500  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
@@ -95,21 +95,21 @@ def main():
             num_layers = trial.suggest_int('num_layers', low=4, high=64)
 
             # dropout: 在模型训练时每个元素被随机丢弃的概率。
-            dropout = trial.suggest_float('dropout', 0.0, 0.5)
+            dropout = trial.suggest_float('dropout', 0.0, 0.6)
 
             # learning_rate: 学习率。
-            learning_rate = trial.suggest_float('learning_rate', 0.000001, 0.001, log=True)
+            learning_rate = trial.suggest_float('learning_rate', 0.00003, 0.001, log=True)
 
             # batch_size: 批量大小。
             batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128, 256])
 
             # patience: 早停策略中的耐心值。
-            patience = trial.suggest_int('early_stopping_patience', 3, 7)
+            patience = trial.suggest_int('early_stopping_patience', 3, 5)
 
             # SVC 超参数
 
             # svc_C: 支持向量机的正则化参数C。
-            svc_C = trial.suggest_float('svc_C', 1e-1, 1e3, log=True)
+            svc_C = trial.suggest_float('svc_C', 1, 500, log=True)
 
             # svc_kernel: 支持向量机使用的核函数类型。
             svc_kernel = trial.suggest_categorical('svc_kernel', ['poly', 'rbf', 'sigmoid'])
