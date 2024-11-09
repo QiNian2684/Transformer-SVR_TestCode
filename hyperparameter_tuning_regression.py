@@ -86,7 +86,7 @@ def main():
         try:
             # Transformer 自编码器超参数
 
-            # model_dim: Transformer模型的维度，可选值为[16, 32, 64, 128]。这个参数决定了模型的大小和复杂度。
+            # model_dim: Transformer模型的维度。这个参数决定了模型的大小和复杂度。
             model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
 
             # num_heads_options: 根据model_dim的可整除性选择的头数选项，保证model_dim可以被num_heads整除。
@@ -99,13 +99,13 @@ def main():
             # num_heads: 选择一个有效的头数，这影响到模型的并行处理能力。
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
 
-            # num_layers: Transformer模型的层数，范围从4到64。层数越多，模型通常越能捕获复杂的特征，但计算成本也越高。
+            # num_layers: Transformer模型的层数。层数越多，模型通常越能捕获复杂的特征，但计算成本也越高。
             num_layers = trial.suggest_int('num_layers', low=4, high=64)
 
-            # dropout: 在模型训练时随机丢弃节点的比例，用以防止过拟合，范围从0.1到0.5。
+            # dropout: 在模型训练时随机丢弃节点的比例，用以防止过拟合。
             dropout = trial.suggest_float('dropout', 0.0, 0.5)
 
-            # learning_rate: 学习率，使用对数标度从1e-6到1e-2选择，对模型训练速度和效果有重要影响。
+            # learning_rate: 学习率，使用对数标度选择，对模型训练速度和效果有重要影响。
             learning_rate = trial.suggest_float('learning_rate', 0.0005, 0.01, log=True)
 
             # batch_size: 批大小，可选值为[16, 32, 48, 64, 128, 256]，影响模型的内存需求和训练速度。
@@ -240,7 +240,7 @@ def main():
                     print(f"无法更新最佳试验的图片：{e}")
 
                 # 保存误差超过15米的样本到 error.csv
-                error_threshold = 15.0  # 误差阈值（米）
+                error_threshold = 20.0  # 误差阈值（米）
                 indices_high_error = np.where(error_distances > error_threshold)[0]
                 if len(indices_high_error) > 0:
                     print(f"发现 {len(indices_high_error)} 个误差超过 {error_threshold} 米的样本。")
