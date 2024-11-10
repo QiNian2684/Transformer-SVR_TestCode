@@ -31,7 +31,7 @@ def set_seed(seed=42):
 def main():
 
     # 固定训练参数
-    epochs = 45  # 训练轮数
+    epochs = 30  # 训练轮数
     n_trials = 600  # Optuna 试验次数，根据计算资源调整
 
     # 设置随机种子以确保可重复性
