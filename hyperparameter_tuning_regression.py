@@ -120,7 +120,7 @@ def main():
             svr_kernel = trial.suggest_categorical('svr_kernel', ['poly', 'rbf', 'sigmoid'])
 
             # svr_C: 正则化参数C，使用对数标度从1到200选择，C值越大，模型越复杂，容错率越低。
-            svr_C = trial.suggest_float('svr_C', 1, 500, log=True)
+            svr_C = trial.suggest_float('svr_C', 100, 500, log=True)
 
             # svr_epsilon: SVR模型的epsilon，定义了不惩罚预测误差在此值内的观测，范围从0.01到3.0。
             svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 3.0)
