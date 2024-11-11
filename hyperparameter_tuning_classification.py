@@ -111,6 +111,7 @@ def main():
             # svc_C: 支持向量机的正则化参数C。
             svc_C = trial.suggest_float('svc_C', 1, 500, log=True)
 
+
             # svc_kernel: 支持向量机使用的核函数类型。
             svc_kernel = trial.suggest_categorical('svc_kernel', ['poly', 'rbf', 'sigmoid'])
 
