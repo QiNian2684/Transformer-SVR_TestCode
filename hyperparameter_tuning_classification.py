@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
-from training_and_evaluation import (
+from training_and_evaluation_classification import (
     train_autoencoder,
     extract_features,
     train_and_evaluate_classification_model,
@@ -18,6 +18,7 @@ import json
 import random
 from datetime import datetime
 import shutil
+import pandas as pd  # 确保导入 pandas 库
 
 def set_seed(seed=42):
     random.seed(seed)
@@ -186,7 +187,7 @@ def main():
             }
 
             # 训练并评估分类模型，包含可视化和打印输出
-            classification_model, accuracy = train_and_evaluate_classification_model(
+            classification_model, accuracy, y_pred_floor = train_and_evaluate_classification_model(
                 X_train_features, y_train_floor,
                 X_test_features, y_test_floor,
                 svc_params=svc_params,
@@ -222,6 +223,18 @@ def main():
                     print(f"最佳试验的结果图片已更新为 {destination_image_path}")
                 except Exception as e:
                     print(f"无法更新最佳试验的图片：{e}")
+
+                # 保存预测的楼层到 CSV 文件
+                predicted_floor_csv_path = os.path.join(current_run_dir, 'predicted_floors.csv')
+                test_data_with_predictions = pd.DataFrame({
+                    'Actual_Floor': y_test_floor,
+                    'Predicted_Floor': y_pred_floor
+                })
+                # 解码楼层标签
+                test_data_with_predictions['Actual_Floor'] = label_encoder.inverse_transform(test_data_with_predictions['Actual_Floor'])
+                test_data_with_predictions['Predicted_Floor'] = label_encoder.inverse_transform(test_data_with_predictions['Predicted_Floor'])
+                test_data_with_predictions.to_csv(predicted_floor_csv_path, index=False)
+                print(f"预测的楼层已保存到 {predicted_floor_csv_path}。")
 
             return accuracy
 

@@ -5,11 +5,10 @@ import torch
 import numpy as np
 from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
-from training_and_evaluation import (
+from training_and_evaluation_regression import (
     train_autoencoder,
     extract_features,
     train_and_evaluate_regression_model,
-
     NaNLossError
 )
 import optuna
@@ -19,7 +18,7 @@ import json
 import random
 from datetime import datetime
 import shutil
-import pandas as pd
+import pandas as pd  # 确保导入 pandas 库
 
 def set_seed(seed=42):
     random.seed(seed)
@@ -203,7 +202,7 @@ def main():
             }
 
             # 训练并评估回归模型，包含可视化和打印输出
-            regression_model, mean_error_distance, error_distances = train_and_evaluate_regression_model(
+            regression_model, mean_error_distance, error_distances, y_pred_coords = train_and_evaluate_regression_model(
                 X_train_features, y_train_coords_original,
                 X_test_features, y_test_coords_original,
                 svr_params=svr_params,
@@ -239,12 +238,16 @@ def main():
                 except Exception as e:
                     print(f"无法更新最佳试验的图片：{e}")
 
-                # 保存误差超过15米的样本到 error.csv
-                error_threshold = 20.0  # 误差阈值（米）
+                # 保存误差超过20米的样本到 error.csv
+                error_threshold = 25.0  # 误差阈值（米）
                 indices_high_error = np.where(error_distances > error_threshold)[0]
                 if len(indices_high_error) > 0:
                     print(f"发现 {len(indices_high_error)} 个误差超过 {error_threshold} 米的样本。")
-                    high_error_data = test_data.iloc[indices_high_error]
+                    high_error_data = test_data.iloc[indices_high_error].copy()
+                    # 添加预测的坐标和误差距离
+                    high_error_data['Predicted_LONGITUDE'] = y_pred_coords[indices_high_error, 0]
+                    high_error_data['Predicted_LATITUDE'] = y_pred_coords[indices_high_error, 1]
+                    high_error_data['Error_Distance'] = error_distances[indices_high_error]
                     high_error_data.to_csv(error_csv_path, index=False)
                     print(f"高误差样本已保存到 {error_csv_path}")
                 else:
