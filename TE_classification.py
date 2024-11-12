@@ -1,15 +1,13 @@
-# training_and_evaluation_regression.py
+# TE_classification.py
 
 import os
 import csv
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.svm import SVR
-from sklearn.multioutput import MultiOutputRegressor
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.svm import SVC
 import matplotlib.pyplot as plt
-import pandas as pd
 
 # 设置可视化字体为 Times New Roman
 plt.rcParams['font.family'] = 'Times New Roman'
@@ -198,88 +196,101 @@ def extract_features(model, X_data, device, batch_size=256):
     return np.vstack(features)
 
 
-def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test_features, y_test_coords,
-                                        svr_params=None, training_params=None,
-                                        train_loss_list=None, val_loss_list=None,
-                                        output_dir=None, image_index=1, csv_file_path=None):
+def train_and_evaluate_classification_model(X_train_features, y_train_floor, X_test_features, y_test_floor,
+                                            svc_params=None, training_params=None,
+                                            train_loss_list=None, val_loss_list=None, label_encoder=None,
+                                            output_dir=None, image_index=1, csv_file_path=None):
     """
-    训练并评估回归模型，包括可视化和打印输出。
+    训练并评估分类模型，包括可视化和打印输出。
 
     参数：
     - X_train_features: 训练集特征
-    - y_train_coords: 训练集坐标（经度、纬度）
+    - y_train_floor: 训练集楼层标签
     - X_test_features: 测试集特征
-    - y_test_coords: 测试集坐标（经度、纬度）
-    - svr_params: SVR模型的参数字典（可选）
+    - y_test_floor: 测试集楼层标签
+    - svc_params: SVC模型的参数字典（可选）
     - training_params: 训练参数的字典，用于显示在图表中
     - train_loss_list: 每个 epoch 的训练损失列表（可选，自编码器的损失）
     - val_loss_list: 每个 epoch 的验证损失列表（可选，自编码器的损失）
+    - label_encoder: 标签编码器，用于解码楼层标签
     - output_dir: 保存结果图片的目录（可选）
     - image_index: 图片编号，默认从1开始
     - csv_file_path: 记录结果的 CSV 文件路径（可选）
 
     返回：
-    - regression_model: 训练好的回归模型
-    - mean_error_distance: 平均误差距离（用于超参数优化）
-    - error_distances: 误差距离数组
-    - y_pred_coords: 预测的坐标数组
+    - classification_model: 训练好的分类模型
+    - accuracy: 分类准确率（用于超参数优化）
+    - y_pred_floor: 预测的楼层标签数组
     """
     try:
-        # 坐标回归模型
-        if svr_params is None:
-            print("使用默认的 SVR 参数进行回归...")
-            svr_params = {
-                'kernel': 'rbf',
-                'C': 1.0,
-                'epsilon': 0.1,
-                'gamma': 'scale'
-            }
-
-        svr = SVR(**svr_params)
-        regression_model = MultiOutputRegressor(svr)
-        regression_model.fit(X_train_features, y_train_coords)
-        print("坐标回归模型训练完成。")
+        # 楼层分类模型
+        print("训练楼层分类模型...")
+        if svc_params is None:
+            classification_model = SVC()
+        else:
+            classification_model = SVC(**svc_params)
+        classification_model.fit(X_train_features, y_train_floor)
+        print("楼层分类模型训练完成。")
 
         # 预测测试数据
         print("开始预测测试数据...")
-        y_pred_coords = regression_model.predict(X_test_features)
+        y_pred_floor = classification_model.predict(X_test_features)
         print("预测完成。")
 
-        # 评估回归模型
-        print("评估回归模型...")
-        mse = mean_squared_error(y_test_coords, y_pred_coords)
-        mae = mean_absolute_error(y_test_coords, y_pred_coords)
-        r2 = r2_score(y_test_coords, y_pred_coords)
-        print("回归模型评估完成。")
+        # 评估分类模型
+        print("评估分类模型...")
+        accuracy = accuracy_score(y_test_floor, y_pred_floor)
+        class_report = classification_report(y_test_floor, y_pred_floor, zero_division=0)
+        print("分类模型评估完成。")
 
-        # 计算误差距离
-        error_distances = compute_error_distances(y_test_coords, y_pred_coords)
-        mean_error_distance = np.mean(error_distances)
-        median_error_distance = np.median(error_distances)
+        # 检查未被预测到的类别
+        actual_classes = set(y_test_floor)
+        predicted_classes = set(y_pred_floor)
+        missing_classes = actual_classes - predicted_classes
+        if missing_classes:
+            print(f"警告：以下类别未被预测到：{missing_classes}")
 
-        print(f"回归模型评估结果：")
-        print(f"MSE: {mse:.6f}")
-        print(f"MAE: {mae:.6f}")
-        print(f"R^2 Score: {r2:.6f}")
-        print(f"平均误差距离（米）: {mean_error_distance:.2f}")
-        print(f"中位数误差距离（米）: {median_error_distance:.2f}")
+        print(f"分类模型评估结果：")
+        print(f"准确率: {accuracy:.4f}")
+        print("分类报告：")
+        print(class_report)
+
+        # 定义所有可能的楼层标签（根据您的数据集调整）
+        all_possible_floors = np.unique(np.concatenate((y_train_floor, y_test_floor)))
+
+        # 计算每层楼的分类准确率
+        per_floor_accuracies = {}
+        for floor in all_possible_floors:
+            indices = (y_test_floor == floor)
+            if np.sum(indices) > 0:
+                # 测试集中有该楼层的样本
+                floor_accuracy = accuracy_score(y_test_floor[indices], y_pred_floor[indices])
+                per_floor_accuracies[floor] = floor_accuracy
+            else:
+                # 测试集中没有该楼层的样本，标记为 -1
+                per_floor_accuracies[floor] = -1
+
+        print("每层楼的分类准确率：")
+        for floor in sorted(per_floor_accuracies.keys()):
+            acc = per_floor_accuracies[floor]
+            if acc != -1:
+                print(f"Floor {floor}: Accuracy {acc:.4f}")
+            else:
+                print(f"Floor {floor}: -1")
 
         # 生成可视化图表
         fig = plt.figure(figsize=(14, 10), constrained_layout=True)
         gs = fig.add_gridspec(2, 2)
 
-        # 第一行第一列：2D预测误差散点图
+        # 第一行第一列：分类报告
         ax1 = fig.add_subplot(gs[0, 0])
-        error_x = y_pred_coords[:, 0] - y_test_coords[:, 0]
-        error_y = y_pred_coords[:, 1] - y_test_coords[:, 1]
-        error_distance = np.sqrt(error_x ** 2 + error_y ** 2)
-        scatter = ax1.scatter(error_x, error_y, c=error_distance, cmap='viridis', alpha=0.6)
-        cbar = fig.colorbar(scatter, ax=ax1)
-        cbar.set_label('Error Distance (meters)')
+        ax1.axis('off')  # 隐藏坐标轴
 
-        ax1.set_title('2D Prediction Errors')
-        ax1.set_xlabel('Longitude Error (meters)')
-        ax1.set_ylabel('Latitude Error (meters)')
+        # 将分类报告格式化为多列文本
+        class_report_lines = class_report.strip().split('\n')
+        class_report_text = '\n'.join(class_report_lines)
+        ax1.text(0.5, 0.5, f"Classification Report:\n{class_report_text}", fontsize=12, ha='center', va='center',
+                 wrap=True)
 
         # 第一行第二列：训练参数和评估指标
         ax2 = fig.add_subplot(gs[0, 1])
@@ -299,13 +310,23 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
                 params_lines.append(line.strip())
             params_text += '\n'.join(params_lines)
 
-        # 格式化评估指标为多列文本
+        # 格式化评估指标为文本
         metrics_text = (
-            f"Regression Model Evaluation Results:\n"
-            f"MSE: {mse:.6f}    MAE: {mae:.6f}\n"
-            f"R² Score: {r2:.6f}\n"
-            f"Mean Error Dist (m): {mean_error_distance:.2f}    Median Error Dist (m): {median_error_distance:.2f}\n"
+            f"Classification Model Evaluation Results:\n"
+            f"Accuracy: {accuracy:.4f}\n"
         )
+
+        if missing_classes:
+            metrics_text += f"Missing Classes: {missing_classes}\n"
+
+        # 添加每层楼的分类准确率
+        metrics_text += "\nPer-floor Accuracies:\n"
+        for floor in sorted(per_floor_accuracies.keys()):
+            acc = per_floor_accuracies[floor]
+            if acc != -1:
+                metrics_text += f"Floor {floor}: {acc:.4f}\n"
+            else:
+                metrics_text += f"Floor {floor}: -1\n"
 
         # 将训练参数和评估指标合并
         combined_text = params_text + "\n\n" + metrics_text
@@ -332,17 +353,18 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
             # 展开参数字典为单独的列
             row_data = {
                 'Image_Index': f"{image_index:04d}",
-                'MSE': mse,
-                'MAE': mae,
-                'R2_Score': r2,
-                'Mean_Error_Distance': mean_error_distance,
-                'Median_Error_Distance': median_error_distance
+                'Accuracy': accuracy,
+                'Missing_Classes': str(missing_classes) if missing_classes else 'None'
             }
 
-            # 添加 svr_params
-            if svr_params is not None:
-                for key, value in svr_params.items():
-                    row_data[f'svr_{key}'] = value
+            # 添加每层楼的分类准确率到 row_data
+            for floor, acc in per_floor_accuracies.items():
+                row_data[f'Accuracy_Floor_{floor}'] = acc
+
+            # 添加 svc_params
+            if svc_params is not None:
+                for key, value in svc_params.items():
+                    row_data[f'svc_{key}'] = value
 
             # 添加 training_params
             if training_params is not None:
@@ -360,14 +382,14 @@ def train_and_evaluate_regression_model(X_train_features, y_train_coords, X_test
             # 确保输出目录存在
             os.makedirs(output_dir, exist_ok=True)
             # 修改这里，确保图片编号为四位数
-            image_path = os.path.join(output_dir, f"{image_index:04d}_regression.png")
+            image_path = os.path.join(output_dir, f"{image_index:04d}_classification.png")
             plt.savefig(image_path)
             plt.close(fig)
             print(f"结果图片已保存到 {image_path}")
         else:
             plt.show()
 
-        return regression_model, mean_error_distance, error_distances, y_pred_coords  # 返回 y_pred_coords
+        return classification_model, accuracy, y_pred_floor  # 返回 y_pred_floor
 
     except ValueError as e:
         if 'NaN' in str(e):

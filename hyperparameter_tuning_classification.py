@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from data_preprocessing import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
-from training_and_evaluation_classification import (
+from TE_classification import (
     train_autoencoder,
     extract_features,
     train_and_evaluate_classification_model,
