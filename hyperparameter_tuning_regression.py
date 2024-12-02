@@ -239,7 +239,7 @@ def main():
                     print(f"无法更新最佳试验的图片：{e}")
 
                 # 保存误差超过20米的样本到 error.csv
-                error_threshold = 25.0  # 误差阈值（米）
+                error_threshold = 15.0  # 误差阈值（米）
                 indices_high_error = np.where(error_distances > error_threshold)[0]
                 if len(indices_high_error) > 0:
                     print(f"发现 {len(indices_high_error)} 个误差超过 {error_threshold} 米的样本。")
