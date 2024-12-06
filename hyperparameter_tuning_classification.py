@@ -41,8 +41,8 @@ def main():
     print(f"使用设备: {device}")
 
     # 数据路径
-    train_path = 'UJIndoorLoc/trainingData.csv'
-    test_path = 'UJIndoorLoc/validationData.csv'
+    train_path = r'C:\Users\86139\Documents\GitHub\Transformer-SVR_TestCode\UJIndoorLoc\trainingdata_building_1.csv'
+    test_path = r'C:\Users\86139\Documents\GitHub\Transformer-SVR_TestCode\UJIndoorLoc\validationData_building_1.csv'
 
     # === 创建结果保存目录 ===
     results_dir = 'results'
