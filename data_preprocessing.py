@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
-from sklearn.decomposition import PCA
+from sklearn.decomposition import KernelPCA  # 使用非线性降维方法KernelPCA替代原PCA
 
 
 def load_and_preprocess_data(train_path, test_path, max_missing_ratio=0.96, feature_missing_threshold=0.96,
@@ -41,8 +41,8 @@ def load_and_preprocess_data(train_path, test_path, max_missing_ratio=0.96, feat
 
     - pca_components:
         类型：整数（int）
-        含义：PCA降维目标维度数。
-        在特征清洗完成后，我们对特征数据应用PCA进行降维，以减少特征维度、降低噪声和冗余。
+        含义：PCA降维目标维度数。（在这里我们用KernelPCA代替）
+        在特征清洗完成后，我们对特征数据应用非线性降维（KernelPCA）进行降维，以减少特征维度、降低噪声和冗余。
         pca_components定义了降维后的特征数目上限。
         如果最终清洗后特征数量小于该值，则以实际特征数为准。
         数值越大，保留的特征维度越多，数据维度高但特征可能更丰富；数值越小，特征维度更精简但可能损失部分信息。
@@ -110,12 +110,12 @@ def load_and_preprocess_data(train_path, test_path, max_missing_ratio=0.96, feat
     X_val_scaled = scaler_X.transform(X_val_raw)
     X_test_scaled = scaler_X.transform(test_features.values)
 
-    # 使用PCA对特征降维
+    # 使用KernelPCA对特征降维（非线性降维）
     actual_pca_components = min(pca_components, X_train_scaled.shape[1])
-    pca = PCA(n_components=actual_pca_components, random_state=42)
-    X_train = pca.fit_transform(X_train_scaled)
-    X_val = pca.transform(X_val_scaled)
-    X_test = pca.transform(X_test_scaled)
+    kpca = KernelPCA(n_components=actual_pca_components, kernel='rbf', random_state=42)
+    X_train = kpca.fit_transform(X_train_scaled)
+    X_val = kpca.transform(X_val_scaled)
+    X_test = kpca.transform(X_test_scaled)
 
     # 分别对经度和纬度目标变量进行标准化
     scaler_y_longitude = StandardScaler()
