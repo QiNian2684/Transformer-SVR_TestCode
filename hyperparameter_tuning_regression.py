@@ -71,7 +71,7 @@ def main():
 
         try:
             # Transformer 参数
-            model_dim = trial.suggest_categorical('model_dim', [16, 32, 64])
+            model_dim = trial.suggest_categorical('model_dim', [16, 32, 64, 128])
             num_heads_options = [h for h in [2, 4, 8, 16] if model_dim % h == 0]
             if not num_heads_options:
                 raise TrialPruned("model_dim 不可被任何 num_heads 整除。")
@@ -79,15 +79,15 @@ def main():
             num_layers = trial.suggest_int('num_layers', low=4, high=64)
             dropout = trial.suggest_float('dropout', 0.0, 0.5)
             learning_rate = trial.suggest_float('learning_rate', 0.0005, 0.1, log=True)
-            batch_size = trial.suggest_categorical('batch_size', [16, 32, 48, 64, 128,])
+            batch_size = trial.suggest_categorical('batch_size', [16, 32, 48, 64, 128])
             patience = trial.suggest_int('early_stopping_patience', 3, 7)
-            min_delta_ratio = trial.suggest_float('min_delta_ratio', 0.003, 0.003)
+            min_delta_ratio = trial.suggest_float('min_delta_ratio', 0.001, 0.003)
 
             # SVR 参数
-            svr_kernel = trial.suggest_categorical('svr_kernel', ['rbf'])
-            svr_C = trial.suggest_float('svr_C', 100, 500, log=True)
+            svr_kernel = trial.suggest_categorical('svr_kernel', ['rbf', 'poly'])
+            svr_C = trial.suggest_float('svr_C', 200, 500, log=True)
             svr_epsilon = trial.suggest_float('svr_epsilon', 0.01, 3.0)
-            svr_gamma = trial.suggest_categorical('svr_gamma', ['scale'])
+            svr_gamma = trial.suggest_categorical('svr_gamma', ['scale', 'auto'])
             if svr_kernel == 'poly':
                 svr_degree = trial.suggest_int('svr_degree', 2, 5)
                 svr_coef0 = trial.suggest_float('svr_coef0', 0.0, 1.0)
