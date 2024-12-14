@@ -3,7 +3,7 @@
 import os
 import torch
 import numpy as np
-from data_preprocessing import load_and_preprocess_data
+from data_preprocessing_no_kpca import load_and_preprocess_data
 from model_definition import WiFiTransformerAutoencoder
 from TE_regression import (
     train_autoencoder,
@@ -78,9 +78,9 @@ def main():
             num_heads = trial.suggest_categorical('num_heads', num_heads_options)
             num_layers = trial.suggest_int('num_layers', low=4, high=64)
             dropout = trial.suggest_float('dropout', 0.0, 0.5)
-            learning_rate = trial.suggest_float('learning_rate', 0.001, 0.03, log=True)
+            learning_rate = trial.suggest_float('learning_rate', 0.0005, 0.1, log=True)
             batch_size = trial.suggest_categorical('batch_size', [16, 32, 48, 64, 128,])
-            patience = trial.suggest_int('early_stopping_patience', 5, 5)
+            patience = trial.suggest_int('early_stopping_patience', 3, 7)
             min_delta_ratio = trial.suggest_float('min_delta_ratio', 0.003, 0.003)
 
             # SVR 参数

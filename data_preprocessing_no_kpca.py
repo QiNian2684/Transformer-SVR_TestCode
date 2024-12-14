@@ -1,14 +1,13 @@
-# data_preprocessing.py
+# data_preprocessing_no_kpca.py
 
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
-from sklearn.decomposition import KernelPCA  # 使用非线性降维方法KernelPCA替代原PCA
+# from sklearn.decomposition import KernelPCA  # 已移除KernelPCA的导入
 
 
-def load_and_preprocess_data(train_path, test_path, max_missing_ratio=0.96, feature_missing_threshold=0.96,
-                             pca_components=128):
+def load_and_preprocess_data(train_path, test_path, max_missing_ratio=0.96, feature_missing_threshold=0.96):
     """
     加载并预处理训练集和测试集数据。
 
@@ -38,14 +37,6 @@ def load_and_preprocess_data(train_path, test_path, max_missing_ratio=0.96, feat
         当某特征在训练集中超过feature_missing_threshold比例的样本为-105时，则该特征被认为无信息价值并被剔除。
         举例：feature_missing_threshold=0.95表示如果有95%的训练样本在某特征上都是-105，则删除该特征。
         调高该值会更宽松（需要更高比例的空缺才剔除特征），调低则更严格。
-
-    - pca_components:
-        类型：整数（int）
-        含义：PCA降维目标维度数。（在这里我们用KernelPCA代替）
-        在特征清洗完成后，我们对特征数据应用非线性降维（KernelPCA）进行降维，以减少特征维度、降低噪声和冗余。
-        pca_components定义了降维后的特征数目上限。
-        如果最终清洗后特征数量小于该值，则以实际特征数为准。
-        数值越大，保留的特征维度越多，数据维度高但特征可能更丰富；数值越小，特征维度更精简但可能损失部分信息。
     """
 
     # 加载训练数据和测试数据
@@ -110,12 +101,18 @@ def load_and_preprocess_data(train_path, test_path, max_missing_ratio=0.96, feat
     X_val_scaled = scaler_X.transform(X_val_raw)
     X_test_scaled = scaler_X.transform(test_features.values)
 
+    # 【移除KernelPCA降维部分】
     # 使用KernelPCA对特征降维（非线性降维）
-    actual_pca_components = min(pca_components, X_train_scaled.shape[1])
-    kpca = KernelPCA(n_components=actual_pca_components, kernel='rbf', random_state=42)
-    X_train = kpca.fit_transform(X_train_scaled)
-    X_val = kpca.transform(X_val_scaled)
-    X_test = kpca.transform(X_test_scaled)
+    # actual_pca_components = min(pca_components, X_train_scaled.shape[1])
+    # kpca = KernelPCA(n_components=actual_pca_components, kernel='rbf', random_state=42)
+    # X_train = kpca.fit_transform(X_train_scaled)
+    # X_val = kpca.transform(X_val_scaled)
+    # X_test = kpca.transform(X_test_scaled)
+
+    # 直接使用缩放后的特征作为最终特征
+    X_train = X_train_scaled
+    X_val = X_val_scaled
+    X_test = X_test_scaled
 
     # 分别对经度和纬度目标变量进行标准化
     scaler_y_longitude = StandardScaler()
@@ -153,7 +150,7 @@ def load_and_preprocess_data(train_path, test_path, max_missing_ratio=0.96, feat
     print("训练集样本数：", X_train.shape[0])
     print("验证集样本数：", X_val.shape[0])
     print("测试集样本数：", X_test.shape[0])
-    print("每条样本特征数（降维后）：", X_train.shape[1])
+    print("每条样本特征数（缩放后）：", X_train.shape[1])
     print("目标维度（经度、纬度）：", y_train.shape[1])
     print("楼层类别数：", len(np.unique(y_train_floor_encoded)))
 
